@@ -2272,7 +2272,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('openCameraBtn')?.addEventListener('click', openReceiptCamera);
     document.getElementById('chooseReceiptPhotoBtn')?.addEventListener('click', () => {
         const input = document.getElementById('receiptPhotoInput');
-        input?.click();
+        if (!input) return;
+
+        try {
+            if (typeof input.showPicker === 'function') {
+                input.showPicker();
+                return;
+            }
+        } catch (error) {
+            console.warn('Receipt picker error, falling back to click():', error);
+        }
+
+        input.click();
     });
     document.getElementById('receiptPhotoInput')?.addEventListener('change', (event) => {
         const file = event.target.files?.[0];

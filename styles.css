@@ -1991,13 +1991,6 @@ body.test-mode .app-header {
     transform: translateY(-2px);
     box-shadow: var(--shadow-button);
 }
-
-@media (min-width: 768px) {
-    .receipt-camera-controls {
-        flex-direction: row;
-        align-items: center;
-    }
-
     .receipt-camera-button {
         flex: 1.2;
     }
