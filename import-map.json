@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "pdf-lib": "./node_modules/pdf-lib/dist/pdf-lib.esm.js"
+  }
+}

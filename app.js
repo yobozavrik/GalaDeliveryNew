@@ -16,6 +16,7 @@ import {
     ThemeManager,
     AppUIAdapter
 } from './src/ui.js';
+import { generateUnloadingReport } from './src/pdf.js';
 
 // Optimized and secured GalaBaluvanaDelivery App
 
@@ -584,6 +585,7 @@ async function submitDraft() {
     }
 
     try {
+        const submissionTimestamp = new Date();
         // Відправляємо всю заявку одним запитом
         await SecureApiClient.sendUnloadingBatch(storeName, draft.items);
 
@@ -599,6 +601,19 @@ async function submitDraft() {
         }
 
         toastManager.show(`Відправлено ${draft.items.length} ${draft.items.length === 1 ? 'товар' : draft.items.length < 5 ? 'товари' : 'товарів'}`, 'success');
+
+        const totalAmount = draft.items.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0);
+        const totalAmountText = Number.isFinite(totalAmount) ? totalAmount.toFixed(2) : '0.00';
+        try {
+            await generateUnloadingReport({
+                storeName,
+                items: draft.items,
+                submittedAt: submissionTimestamp,
+                summary: `Відвантаження ${draft.items.length} позицій на суму ${totalAmountText} ₴.`
+            });
+        } catch (pdfError) {
+            console.warn('Не вдалося створити PDF-звіт:', pdfError);
+        }
 
         // Видаляємо чернетку після успішної відправки
         await DraftManager.deleteDraft(storeName);

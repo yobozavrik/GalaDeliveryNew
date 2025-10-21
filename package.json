@@ -18,11 +18,13 @@
   "author": "AI Assistant",
   "license": "MIT",
   "devDependencies": {
-    "serve": "^14.2.1",
     "jsdom": "^24.0.0",
+    "serve": "^14.2.1",
     "vitest": "^1.4.0"
   },
-  "dependencies": {},
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  },
   "engines": {
     "node": ">=14.0.0"
   }
