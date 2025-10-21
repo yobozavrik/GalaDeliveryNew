@@ -1,10 +1,109 @@
 import { config } from './config.js';
 
+const FALLBACK_ERROR_SIGNATURE = 'webhook "POST deliverygb" is not registered';
+
+const parseJsonSafely = (text) => {
+    if (!text) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(text);
+    } catch (error) {
+        console.warn('Failed to parse JSON response:', error);
+        return text;
+    }
+};
+
+const shouldRetryWithTestWebhook = (error) => {
+    if (!error || error.status !== 404) {
+        return false;
+    }
+
+    const body = typeof error.body === 'string' ? error.body : '';
+
+    if (!body) {
+        return false;
+    }
+
+    try {
+        const parsed = JSON.parse(body);
+        const message = typeof parsed?.message === 'string' ? parsed.message : '';
+        return message.includes(FALLBACK_ERROR_SIGNATURE);
+    } catch (parseError) {
+        return body.includes(FALLBACK_ERROR_SIGNATURE) || body.includes('requested webhook');
+    }
+};
+
+const postJsonToWebhook = async (url, payload) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+            mode: 'cors'
+        });
+
+        const text = await response.text();
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            const error = new Error(`HTTP ${response.status}`);
+            error.status = response.status;
+            error.body = text;
+            error.url = url;
+            throw error;
+        }
+
+        return parseJsonSafely(text);
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            const abortError = new Error('Request timed out');
+            abortError.status = 408;
+            throw abortError;
+        }
+        throw error;
+    }
+};
+
+const sendWithFallback = async (payload) => {
+    const shouldAllowFallback = !config.isTestMode && config.N8N_WEBHOOK_URL !== config.testWebhookUrl;
+    const urlsToTry = [config.N8N_WEBHOOK_URL];
+
+    if (shouldAllowFallback) {
+        urlsToTry.push(config.testWebhookUrl);
+    }
+
+    let lastError = null;
+
+    for (let index = 0; index < urlsToTry.length; index += 1) {
+        const url = urlsToTry[index];
+
+        try {
+            if (index > 0) {
+                console.warn('Retrying with backup webhook URL:', url);
+            }
+            return await postJsonToWebhook(url, payload);
+        } catch (error) {
+            lastError = error;
+
+            const canRetry = index === 0 && shouldAllowFallback && shouldRetryWithTestWebhook(error);
+            if (!canRetry) {
+                break;
+            }
+        }
+    }
+
+    throw lastError;
+};
+
 class SecureApiClient {
     static async sendPurchase(data, file = null) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
-
         let photoBase64 = null;
         if (file) {
             try {
@@ -26,32 +125,14 @@ class SecureApiClient {
         };
 
         try {
-            const response = await fetch(config.N8N_WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                signal: controller.signal,
-                mode: 'cors'
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            return await response.json();
+            return await sendWithFallback(payload);
         } catch (error) {
-            clearTimeout(timeoutId);
             console.error('API Error:', error);
             throw error;
         }
     }
 
     static async sendUnloadingBatch(storeName, items) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
-
         const totalAmount = items.reduce((sum, item) => sum + item.totalAmount, 0);
         const totalItems = items.length;
 
@@ -73,32 +154,14 @@ class SecureApiClient {
         };
 
         try {
-            const response = await fetch(config.N8N_WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                signal: controller.signal,
-                mode: 'cors'
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            return await response.json();
+            return await sendWithFallback(payload);
         } catch (error) {
-            clearTimeout(timeoutId);
             console.error('Batch API Error:', error);
             throw error;
         }
     }
 
     static async sendPurchaseBatch(locationName, items) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
-
         const totalAmount = items.reduce((sum, item) => sum + item.totalAmount, 0);
         const totalItems = items.length;
 
@@ -119,23 +182,8 @@ class SecureApiClient {
         };
 
         try {
-            const response = await fetch(config.N8N_WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                signal: controller.signal,
-                mode: 'cors'
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            return await response.json();
+            return await sendWithFallback(payload);
         } catch (error) {
-            clearTimeout(timeoutId);
             console.error('Purchase Batch API Error:', error);
             throw error;
         }

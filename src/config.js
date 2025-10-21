@@ -27,15 +27,11 @@ class SecureConfig {
 
         if (isLocalhost) {
             // На localhost завжди використовуємо прямий URL до n8n (тестовий або продакшн)
-            return this.isTestMode
-                ? 'https://n8n.dmytrotovstytskyi.online/webhook-test/deliverygb'
-                : 'https://n8n.dmytrotovstytskyi.online/webhook/deliverygb';
+            return this.isTestMode ? this.testWebhookUrl : this.productionWebhookUrl;
         }
 
         // На Vercel використовуємо proxy для продакшн, прямий URL для тестів
-        const productionUrl = '/api/delivery';
-        const testUrl = 'https://n8n.dmytrotovstytskyi.online/webhook-test/deliverygb';
-        return this.isTestMode ? testUrl : productionUrl;
+        return this.isTestMode ? this.testWebhookUrl : this.productionProxyUrl;
     }
 
     setMode(mode) {
@@ -103,6 +99,18 @@ class SecureConfig {
 
     get deliveryLocations() {
         return this.unloadingLocations;
+    }
+
+    get productionWebhookUrl() {
+        return 'https://n8n.dmytrotovstytskyi.online/webhook/deliverygb';
+    }
+
+    get productionProxyUrl() {
+        return '/api/delivery';
+    }
+
+    get testWebhookUrl() {
+        return 'https://n8n.dmytrotovstytskyi.online/webhook-test/deliverygb';
     }
 
     get products() {
