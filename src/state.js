@@ -9,6 +9,7 @@ class AppState {
         this.selectedStore = null;
         this.batchItems = [];
         this.editingItemId = null;
+        this.operationType = null;
         this.uiAdapter = uiAdapter;
     }
 
@@ -42,6 +43,9 @@ class AppState {
         this.screen = screen;
         if (options.isUnloading !== undefined) this.isUnloading = options.isUnloading;
         if (options.isDelivery !== undefined) this.isDelivery = options.isDelivery;
+        if (Object.prototype.hasOwnProperty.call(options, 'operationType')) {
+            this.operationType = options.operationType;
+        }
         this.updateUI();
     }
 
