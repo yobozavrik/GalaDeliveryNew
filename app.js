@@ -129,7 +129,6 @@ const currencyFormatter = new Intl.NumberFormat('uk-UA', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
 });
-
 // ============================================
 // FORM HANDLERS
 // ============================================
@@ -249,6 +248,9 @@ async function handleBackButton() {
         // З вибору локації для закупки - до списку чернеток закупок
         appState.setScreen('purchase-drafts-list');
         await showPurchaseDraftsList();
+    } else if (appState.screen === 'operations-detail') {
+        appState.setScreen('operations-summary', { isUnloading: false, isDelivery: false, operationType: null });
+        await renderOperationsSummary();
     } else {
         // В усіх інших випадках - на головну
         appState.setScreen('main');
@@ -275,10 +277,6 @@ async function startUnloading() {
 }
 
 async function showOperationsSummary() {
-    appState.setScreen('operations-summary', { isUnloading: false, isDelivery: false });
-    await renderOperationsSummary();
-}
-
 function summarizeOperationItems(items) {
     const totalAmount = items.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0);
     const totalWeight = items.reduce((sum, item) => {
@@ -304,7 +302,6 @@ function formatProductsList(products) {
     const rest = products.length > 3 ? ` +${products.length - 3}` : '';
     return `${preview}${rest}`;
 }
-
 async function renderOperationsSummary() {
     const dateElement = document.getElementById('operationsSummaryDate');
     const purchaseSubtitle = document.getElementById('purchaseOperationSubtitle');
@@ -329,16 +326,6 @@ async function renderOperationsSummary() {
     dateElement.textContent = today.toLocaleDateString('uk-UA', formatterOptions);
 
     const items = await SecureStorageManager.getHistoryItems();
-
-    const isSameDay = (timestamp) => {
-        if (!timestamp) return false;
-        const date = new Date(timestamp);
-        return date.getDate() === today.getDate()
-            && date.getMonth() === today.getMonth()
-            && date.getFullYear() === today.getFullYear();
-    };
-
-    const todaysItems = items.filter(item => isSameDay(item.timestamp));
     const purchaseItems = todaysItems.filter(item => item.type === 'Закупка');
     const unloadingItems = todaysItems.filter(item => item.type === 'Відвантаження');
 
@@ -368,12 +355,6 @@ async function renderOperationsSummary() {
 
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
-    }
-}
-
-function refreshOperationsSummaryIfVisible() {
-    if (appState.screen === 'operations-summary') {
-        renderOperationsSummary();
     }
 }
 

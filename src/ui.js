@@ -356,7 +356,6 @@ class AppUIAdapter {
             'purchase-location-selection': () => 'Оберіть локацію закупки',
             'purchase-drafts-list': () => 'Чернетки закупок',
             'purchase-draft-view': () => state.selectedStore ? `Закупка: ${state.selectedStore}` : 'Чернетка закупки',
-            'operations-summary': () => 'Операції сьогодні'
         };
 
         if (screenTitles[state.screen]) {
