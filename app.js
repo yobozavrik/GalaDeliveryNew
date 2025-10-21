@@ -118,6 +118,7 @@ const toastManager = new ToastManager();
 let selectedFile = null;
 let receiptPhotoFile = null;
 let recognizedItems = [];
+let receiptCameraStream = null;
 
 // ============================================
 // FORM HANDLERS
@@ -211,6 +212,10 @@ function validateLocation() {
 async function handleBackButton() {
     // Скидаємо режим редагування
     appState.editingItemId = null;
+
+    if (appState.screen === 'receipt-scan') {
+        stopReceiptCameraStream();
+    }
 
     // Розумна навігація назад
     if (appState.screen === 'purchase-form' && appState.isUnloading && appState.selectedStore) {
@@ -1588,34 +1593,51 @@ async function clearHistory() {
 // RECEIPT SCANNING FUNCTIONS
 // ============================================
 
+function stopReceiptCameraStream() {
+    if (receiptCameraStream) {
+        receiptCameraStream.getTracks().forEach(track => track.stop());
+        receiptCameraStream = null;
+    }
+
+    const streamWrapper = document.getElementById('receiptCameraStreamWrapper');
+    const video = document.getElementById('receiptCameraStream');
+
+    if (streamWrapper) streamWrapper.style.display = 'none';
+    if (video) video.srcObject = null;
+}
+
 function showReceiptScanScreen() {
     appState.setScreen('receipt-scan');
     receiptPhotoFile = null;
+    stopReceiptCameraStream();
 
     const preview = document.getElementById('receiptPreview');
-    const cameraButton = document.querySelector('.receipt-camera-button');
     const processBtn = document.getElementById('processReceiptBtn');
+    const actions = document.getElementById('receiptCameraActions');
+    const previewImage = document.getElementById('receiptPreviewImage');
+    const input = document.getElementById('receiptPhotoInput');
 
     if (preview) preview.style.display = 'none';
-    if (cameraButton) cameraButton.style.display = 'flex';
+    if (previewImage) previewImage.src = '';
     if (processBtn) processBtn.style.display = 'none';
+    if (actions) actions.style.display = 'flex';
+    if (input) input.value = '';
 }
 
-function handleReceiptPhotoSelect(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+function applyReceiptPhotoFile(file) {
+    if (!file) return false;
 
     if (!InputValidator.validateFile(file)) {
         toastManager.show('Файл занадто великий або непідтримуваний формат', 'error');
-        return;
+        return false;
     }
 
     receiptPhotoFile = file;
 
     const preview = document.getElementById('receiptPreview');
     const previewImage = document.getElementById('receiptPreviewImage');
-    const cameraButton = document.querySelector('.receipt-camera-button');
     const processBtn = document.getElementById('processReceiptBtn');
+    const actions = document.getElementById('receiptCameraActions');
 
     if (previewImage) {
         const previewUrl = URL.createObjectURL(file);
@@ -1624,24 +1646,109 @@ function handleReceiptPhotoSelect(event) {
     }
 
     if (preview) preview.style.display = 'block';
-    if (cameraButton) cameraButton.style.display = 'none';
     if (processBtn) processBtn.style.display = 'block';
+    if (actions) actions.style.display = 'flex';
 
-    toastManager.show('Фото завантажено. Натисніть "Розпізнати чек"', 'success');
+    stopReceiptCameraStream();
+    toastManager.show('Фото додано. Натисніть "Розпізнати чек"', 'success');
+    return true;
+}
+
+function handleReceiptPhotoSelect(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    applyReceiptPhotoFile(file);
 }
 
 function retakeReceiptPhoto() {
     receiptPhotoFile = null;
 
     const preview = document.getElementById('receiptPreview');
-    const cameraButton = document.querySelector('.receipt-camera-button');
     const processBtn = document.getElementById('processReceiptBtn');
+    const actions = document.getElementById('receiptCameraActions');
     const input = document.getElementById('receiptPhotoInput');
 
     if (preview) preview.style.display = 'none';
-    if (cameraButton) cameraButton.style.display = 'flex';
     if (processBtn) processBtn.style.display = 'none';
+    if (actions) actions.style.display = 'flex';
     if (input) input.value = '';
+
+    stopReceiptCameraStream();
+}
+
+async function openReceiptCamera() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+        toastManager.show('Камера не підтримується. Завантажте фото з галереї.', 'error');
+        document.getElementById('receiptPhotoInput')?.click();
+        return;
+    }
+
+    try {
+        receiptCameraStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: { ideal: 'environment' }
+            }
+        });
+
+        const video = document.getElementById('receiptCameraStream');
+        const streamWrapper = document.getElementById('receiptCameraStreamWrapper');
+        const actions = document.getElementById('receiptCameraActions');
+
+        if (video) {
+            video.srcObject = receiptCameraStream;
+            await video.play().catch(() => {});
+        }
+
+        if (streamWrapper) streamWrapper.style.display = 'flex';
+        if (actions) actions.style.display = 'none';
+
+        toastManager.show('Камера увімкнена. Зробіть фото чека.', 'info');
+    } catch (error) {
+        console.error('Camera access error:', error);
+        toastManager.show('Не вдалося отримати доступ до камери. Дозвольте доступ або завантажте фото.', 'error');
+        stopReceiptCameraStream();
+        const actions = document.getElementById('receiptCameraActions');
+        if (actions) actions.style.display = 'flex';
+        document.getElementById('receiptPhotoInput')?.click();
+    }
+}
+
+function closeReceiptCamera() {
+    stopReceiptCameraStream();
+    const actions = document.getElementById('receiptCameraActions');
+    if (actions) actions.style.display = 'flex';
+}
+
+function captureReceiptPhoto() {
+    const video = document.getElementById('receiptCameraStream');
+    if (!video || !receiptCameraStream) {
+        toastManager.show('Камера не готова. Спробуйте ще раз.', 'error');
+        return;
+    }
+
+    const { videoWidth, videoHeight } = video;
+    if (!videoWidth || !videoHeight) {
+        toastManager.show('Зображення ще не завантажилось. Зачекайте секунду.', 'error');
+        return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob((blob) => {
+        if (!blob) {
+            toastManager.show('Не вдалося зробити фото. Спробуйте ще раз.', 'error');
+            return;
+        }
+
+        const file = new File([blob], `metro-receipt-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        applyReceiptPhotoFile(file);
+    }, 'image/jpeg', 0.95);
 }
 
 async function processReceipt() {
@@ -1961,15 +2068,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Receipt scanning listeners
     document.getElementById('scanReceiptBtn')?.addEventListener('click', showReceiptScanScreen);
     document.getElementById('manualEntryBtn')?.addEventListener('click', () => {
+        stopReceiptCameraStream();
         appState.setScreen('purchase-form');
         appState.isUnloading = false;
         appState.isDelivery = false;
         setupPurchaseForm();
     });
-    document.getElementById('takePhotoReceiptBtn')?.addEventListener('click', () => {
+    document.getElementById('openCameraBtn')?.addEventListener('click', openReceiptCamera);
+    document.getElementById('chooseReceiptPhotoBtn')?.addEventListener('click', () => {
+        stopReceiptCameraStream();
         document.getElementById('receiptPhotoInput')?.click();
     });
     document.getElementById('receiptPhotoInput')?.addEventListener('change', handleReceiptPhotoSelect);
+    document.getElementById('captureReceiptPhotoBtn')?.addEventListener('click', captureReceiptPhoto);
+    document.getElementById('closeCameraBtn')?.addEventListener('click', closeReceiptCamera);
     document.getElementById('retakePhotoBtn')?.addEventListener('click', retakeReceiptPhoto);
     document.getElementById('processReceiptBtn')?.addEventListener('click', processReceipt);
     document.getElementById('confirmRecognizedItemsBtn')?.addEventListener('click', confirmRecognizedItems);
