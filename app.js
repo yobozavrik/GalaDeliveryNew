@@ -123,6 +123,26 @@ let recognizedItems = [];
 let receiptCameraStream = null;
 let editingRecognizedIndex = null;
 
+const currencyFormatter = new Intl.NumberFormat('uk-UA', {
+    style: 'currency',
+    currency: 'UAH',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+});
+
+function getUkrainianPlural(count, [one, few, many]) {
+    const mod10 = Math.abs(count) % 10;
+    const mod100 = Math.abs(count) % 100;
+
+    if (mod10 === 1 && mod100 !== 11) {
+        return one;
+    }
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+        return few;
+    }
+    return many;
+}
+
 // ============================================
 // FORM HANDLERS
 // ============================================
@@ -242,6 +262,9 @@ async function handleBackButton() {
         // З вибору локації для закупки - до списку чернеток закупок
         appState.setScreen('purchase-drafts-list');
         await showPurchaseDraftsList();
+    } else if (appState.screen === 'operations-detail') {
+        appState.setScreen('operations-summary', { isUnloading: false, isDelivery: false, operationType: null });
+        await renderOperationsSummary();
     } else {
         // В усіх інших випадках - на головну
         appState.setScreen('main');
@@ -267,9 +290,294 @@ async function startUnloading() {
     await showDraftsList();
 }
 
-function startDelivery() {
-    appState.setScreen('purchase-form', { isUnloading: false, isDelivery: true });
-    setupPurchaseForm();
+async function showOperationsSummary() {
+    appState.setScreen('operations-summary', { isUnloading: false, isDelivery: false, operationType: null });
+    try {
+        await renderOperationsSummary();
+    } catch (error) {
+        console.error('Error rendering operations summary:', error);
+    }
+}
+
+function isSameDay(timestamp, referenceDate = new Date()) {
+    if (!timestamp) return false;
+    const date = new Date(timestamp);
+    return date.getDate() === referenceDate.getDate()
+        && date.getMonth() === referenceDate.getMonth()
+        && date.getFullYear() === referenceDate.getFullYear();
+}
+
+function getTodaysItems(allItems, referenceDate = new Date()) {
+    if (!Array.isArray(allItems) || allItems.length === 0) {
+        return [];
+    }
+
+    const startOfDay = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+
+    return allItems.filter(item => {
+        if (!item || !item.timestamp) return false;
+        const itemDate = new Date(item.timestamp);
+        return itemDate >= startOfDay && itemDate < endOfDay;
+    });
+}
+
+function summarizeOperationItems(items) {
+    const totalAmount = items.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0);
+    const totalWeight = items.reduce((sum, item) => {
+        if (item.unit === 'kg') {
+            return sum + (Number(item.quantity) || 0);
+        }
+        return sum;
+    }, 0);
+
+    const uniqueProducts = Array.from(new Set(items.map(item => item.productName).filter(Boolean)));
+
+    return {
+        totalAmount,
+        totalWeight,
+        uniqueProducts
+    };
+}
+
+function formatProductsList(products) {
+    if (!products.length) return '—';
+
+    const preview = products.slice(0, 3).join(', ');
+    const rest = products.length > 3 ? ` +${products.length - 3}` : '';
+    return `${preview}${rest}`;
+}
+
+function groupOperationsByLocation(items) {
+    const groups = new Map();
+
+    for (const item of items) {
+        const locationName = item.location && item.location.trim()
+            ? item.location.trim()
+            : 'Без локації';
+
+        if (!groups.has(locationName)) {
+            groups.set(locationName, {
+                location: locationName,
+                totalAmount: 0,
+                uniqueProducts: new Set(),
+                operationsCount: 0
+            });
+        }
+
+        const group = groups.get(locationName);
+        group.totalAmount += Number(item.totalAmount) || 0;
+        if (item.productName) {
+            group.uniqueProducts.add(item.productName);
+        }
+        group.operationsCount += 1;
+    }
+
+    return Array.from(groups.values()).map(group => ({
+        location: group.location,
+        totalAmount: group.totalAmount,
+        productNamesCount: group.uniqueProducts.size,
+        operationsCount: group.operationsCount
+    }));
+}
+
+async function renderOperationsSummary() {
+    const dateElement = document.getElementById('operationsSummaryDate');
+    const purchaseSubtitle = document.getElementById('purchaseOperationSubtitle');
+    const unloadingSubtitle = document.getElementById('unloadingOperationSubtitle');
+    const purchaseAmount = document.getElementById('purchaseTotalAmount');
+    const purchaseWeight = document.getElementById('purchaseTotalWeight');
+    const purchaseProducts = document.getElementById('purchaseProductsList');
+    const unloadingAmount = document.getElementById('unloadingTotalAmount');
+    const unloadingWeight = document.getElementById('unloadingTotalWeight');
+    const unloadingProducts = document.getElementById('unloadingProductsList');
+    const emptyState = document.getElementById('operationsEmpty');
+    const cardsContainer = document.getElementById('operationsCards');
+
+    if (!dateElement || !purchaseSubtitle || !unloadingSubtitle || !purchaseAmount || !purchaseWeight
+        || !purchaseProducts || !unloadingAmount || !unloadingWeight || !unloadingProducts
+        || !emptyState || !cardsContainer) {
+        return;
+    }
+
+    const today = new Date();
+    const formatterOptions = { weekday: 'long', day: '2-digit', month: 'long' };
+    dateElement.textContent = today.toLocaleDateString('uk-UA', formatterOptions);
+
+    const items = await SecureStorageManager.getHistoryItems();
+
+    const todaysItems = getTodaysItems(items, today);
+    const purchaseItems = todaysItems.filter(item => item.type === 'Закупка');
+    const unloadingItems = todaysItems.filter(item => item.type === 'Відвантаження');
+
+    const purchaseStats = summarizeOperationItems(purchaseItems);
+    const unloadingStats = summarizeOperationItems(unloadingItems);
+
+    const formatAmount = (amount) => currencyFormatter.format(Math.round(amount * 100) / 100);
+    const formatWeight = (weight) => weight > 0 ? `${weight.toFixed(2)} кг` : '—';
+
+    purchaseAmount.textContent = formatAmount(purchaseStats.totalAmount);
+    purchaseWeight.textContent = formatWeight(purchaseStats.totalWeight);
+    purchaseProducts.textContent = formatProductsList(purchaseStats.uniqueProducts);
+    purchaseSubtitle.textContent = purchaseItems.length
+        ? `${purchaseItems.length} ${purchaseItems.length === 1 ? 'операція' : 'операції'}`
+        : 'Немає операцій';
+
+    unloadingAmount.textContent = formatAmount(unloadingStats.totalAmount);
+    unloadingWeight.textContent = formatWeight(unloadingStats.totalWeight);
+    unloadingProducts.textContent = formatProductsList(unloadingStats.uniqueProducts);
+    unloadingSubtitle.textContent = unloadingItems.length
+        ? `${unloadingItems.length} ${unloadingItems.length === 1 ? 'операція' : 'операції'}`
+        : 'Немає операцій';
+
+    const hasOperations = purchaseItems.length > 0 || unloadingItems.length > 0;
+    emptyState.style.display = hasOperations ? 'none' : 'flex';
+    cardsContainer.style.display = hasOperations ? 'grid' : 'none';
+
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+async function renderOperationsDetail(operationType) {
+    const titleElement = document.getElementById('operationsDetailTitle');
+    const dateElement = document.getElementById('operationsDetailDate');
+    const listElement = document.getElementById('operationsDetailList');
+    const emptyState = document.getElementById('operationsDetailEmpty');
+
+    if (!titleElement || !dateElement || !listElement || !emptyState) {
+        return;
+    }
+
+    const today = new Date();
+    const formatterOptions = { weekday: 'long', day: '2-digit', month: 'long' };
+    dateElement.textContent = today.toLocaleDateString('uk-UA', formatterOptions);
+
+    switch (operationType) {
+        case 'Закупка':
+            titleElement.textContent = 'Закупка за локаціями';
+            break;
+        case 'Відвантаження':
+            titleElement.textContent = 'Відвантаження за локаціями';
+            break;
+        default:
+            titleElement.textContent = 'Операції за локаціями';
+    }
+
+    const items = await SecureStorageManager.getHistoryItems();
+    const todaysItems = getTodaysItems(items, today)
+        .filter(item => item.type === operationType);
+
+    const grouped = groupOperationsByLocation(todaysItems)
+        .map(group => ({
+            ...group,
+            totalAmount: Math.round(group.totalAmount * 100) / 100
+        }))
+        .sort((a, b) => {
+            if (b.totalAmount !== a.totalAmount) {
+                return b.totalAmount - a.totalAmount;
+            }
+            if (b.operationsCount !== a.operationsCount) {
+                return b.operationsCount - a.operationsCount;
+            }
+            return a.location.localeCompare(b.location, 'uk');
+        });
+
+    listElement.innerHTML = '';
+
+    if (!grouped.length) {
+        emptyState.style.display = 'flex';
+        listElement.style.display = 'none';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+    listElement.style.display = 'flex';
+
+    const formatAmount = (amount) => currencyFormatter.format(Math.round(amount * 100) / 100);
+
+    for (const group of grouped) {
+        const card = document.createElement('article');
+        card.className = 'operation-location-card glassmorphism';
+
+        const iconWrapper = document.createElement('div');
+        iconWrapper.className = 'location-card-icon';
+        const icon = document.createElement('i');
+        icon.setAttribute('data-lucide', 'map-pin');
+        iconWrapper.appendChild(icon);
+
+        const content = document.createElement('div');
+        content.className = 'location-card-content';
+
+        const header = document.createElement('div');
+        header.className = 'location-card-header';
+
+        const locationTitle = document.createElement('h3');
+        locationTitle.textContent = group.location;
+
+        const amount = document.createElement('span');
+        amount.className = 'location-card-amount';
+        amount.textContent = formatAmount(group.totalAmount);
+
+        header.appendChild(locationTitle);
+        header.appendChild(amount);
+
+        const meta = document.createElement('div');
+        meta.className = 'location-card-meta';
+
+        const productsMeta = document.createElement('span');
+        productsMeta.className = 'location-card-meta-item';
+        const productsIcon = document.createElement('i');
+        productsIcon.setAttribute('data-lucide', 'tag');
+        const productsText = document.createElement('span');
+        const productLabel = getUkrainianPlural(group.productNamesCount, ['найменування', 'найменування', 'найменувань']);
+        productsText.textContent = `${group.productNamesCount} ${productLabel}`;
+        productsMeta.appendChild(productsIcon);
+        productsMeta.appendChild(productsText);
+
+        const operationsMeta = document.createElement('span');
+        operationsMeta.className = 'location-card-meta-item';
+        const operationsIcon = document.createElement('i');
+        operationsIcon.setAttribute('data-lucide', 'list-checks');
+        const operationsText = document.createElement('span');
+        const operationsLabel = getUkrainianPlural(group.operationsCount, ['операція', 'операції', 'операцій']);
+        operationsText.textContent = `${group.operationsCount} ${operationsLabel}`;
+        operationsMeta.appendChild(operationsIcon);
+        operationsMeta.appendChild(operationsText);
+
+        meta.appendChild(productsMeta);
+        meta.appendChild(operationsMeta);
+
+        content.appendChild(header);
+        content.appendChild(meta);
+
+        card.appendChild(iconWrapper);
+        card.appendChild(content);
+
+        listElement.appendChild(card);
+    }
+
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+async function showOperationsDetail(operationType) {
+    appState.setScreen('operations-detail', {
+        isUnloading: operationType === 'Відвантаження',
+        isDelivery: false,
+        operationType
+    });
+    await renderOperationsDetail(operationType);
+}
+
+function refreshOperationsSummaryIfVisible() {
+    if (appState.screen === 'operations-summary') {
+        renderOperationsSummary().catch(err => console.error('Error refreshing operations summary:', err));
+    } else if (appState.screen === 'operations-detail' && appState.operationType) {
+        renderOperationsDetail(appState.operationType)
+            .catch(err => console.error('Error refreshing operations detail:', err));
+    }
 }
 
 function setupStoreSelection() {
@@ -600,6 +908,8 @@ async function submitDraft() {
                 console.log(`✅ Removed from inventory: ${item.productName} ${item.quantity} ${item.unit}`);
             }
         }
+
+        refreshOperationsSummaryIfVisible();
 
         toastManager.show(`Відправлено ${draft.items.length} ${draft.items.length === 1 ? 'товар' : draft.items.length < 5 ? 'товари' : 'товарів'}`, 'success');
 
@@ -1027,6 +1337,8 @@ async function submitPurchaseDraft() {
             await InventoryManager.addStock(item.productName, item.quantity, item.unit);
             console.log(`✅ Added to inventory: ${item.productName} ${item.quantity} ${item.unit}`);
         }
+
+        refreshOperationsSummaryIfVisible();
 
         toastManager.show(`Відправлено ${draft.items.length} ${draft.items.length === 1 ? 'товар' : draft.items.length < 5 ? 'товари' : 'товарів'}`, 'success');
 
@@ -1464,6 +1776,7 @@ async function handleFormSubmit(event) {
     try {
         // Save to localStorage FIRST (так дані не потеряются)
         await SecureStorageManager.addToHistory(itemData);
+        refreshOperationsSummaryIfVisible();
 
         // Якщо це закупка - додаємо до inventory
         if (type === 'Закупка') {
@@ -1620,6 +1933,7 @@ async function clearHistory() {
         await SecureStorageManager.clearHistory();
         await InventoryManager.clearDailyStock(); // Очищаємо залишки
         await updateHistoryDisplay();
+        refreshOperationsSummaryIfVisible();
         hideAiSummaryModal();
         toastManager.show('Історію та залишки очищено', 'success');
     }
@@ -2213,7 +2527,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('backButton')?.addEventListener('click', handleBackButton);
     document.getElementById('startPurchaseBtn')?.addEventListener('click', startPurchase);
     document.getElementById('startUnloadingBtn')?.addEventListener('click', startUnloading);
-    document.getElementById('startDeliveryBtn')?.addEventListener('click', startDelivery);
+    document.getElementById('operationsSummaryBtn')?.addEventListener('click', showOperationsSummary);
+    const purchaseOperationsCard = document.getElementById('purchaseOperationsCard');
+    const unloadingOperationsCard = document.getElementById('unloadingOperationsCard');
+
+    purchaseOperationsCard?.addEventListener('click', () => showOperationsDetail('Закупка'));
+    purchaseOperationsCard?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            showOperationsDetail('Закупка');
+        }
+    });
+
+    unloadingOperationsCard?.addEventListener('click', () => showOperationsDetail('Відвантаження'));
+    unloadingOperationsCard?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            showOperationsDetail('Відвантаження');
+        }
+    });
     document.getElementById('purchaseForm')?.addEventListener('submit', handleFormSubmit);
     document.getElementById('photoInput')?.addEventListener('change', handlePhotoSelect);
     document.getElementById('photoButton')?.addEventListener('click', () => {
