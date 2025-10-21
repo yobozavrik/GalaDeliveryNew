@@ -382,11 +382,19 @@
 
                 <div class="receipt-scan-container">
                     <div class="receipt-camera-area">
-                        <input type="file" id="receiptPhotoInput" accept="image/*" capture="environment" style="display: none;">
-                        <button class="receipt-camera-button glassmorphism" id="takePhotoReceiptBtn" type="button">
-                            <i data-lucide="camera" class="camera-icon-large"></i>
-                            <span>Зробити фото чека</span>
-                        </button>
+                        <input type="file" id="receiptCameraInput" accept="image/*" capture="environment" class="receipt-file-input" tabindex="-1">
+                        <input type="file" id="receiptGalleryInput" accept="image/*" class="receipt-file-input" tabindex="-1">
+
+                        <div class="receipt-camera-actions" id="receiptCameraActions">
+                            <button class="receipt-camera-button glassmorphism" id="openCameraBtn" type="button">
+                                <i data-lucide="camera" class="camera-icon-large"></i>
+                                <span>Зробити фото</span>
+                            </button>
+                            <button class="receipt-gallery-button glassmorphism" id="chooseReceiptPhotoBtn" type="button">
+                                <i data-lucide="image"></i>
+                                <span>Завантажити фото</span>
+                            </button>
+                        </div>
 
                         <div class="receipt-preview" id="receiptPreview" style="display: none;">
                             <img id="receiptPreviewImage" alt="Фото чека">
