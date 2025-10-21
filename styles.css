@@ -1876,6 +1876,19 @@ body.test-mode .app-header {
     padding: 0 1rem 6rem 1rem;
 }
 
+.receipt-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+    opacity: 0;
+}
+
 .receipt-camera-area {
     display: flex;
     flex-direction: column;
