@@ -1617,6 +1617,8 @@ function stopReceiptCameraStream() {
     const streamWrapper = document.getElementById('receiptCameraStreamWrapper');
     const video = document.getElementById('receiptCameraStream');
     const openCameraBtn = document.getElementById('openCameraBtn');
+    const placeholder = document.getElementById('receiptCameraPlaceholder');
+    const preview = document.getElementById('receiptPreview');
 
     if (streamWrapper) streamWrapper.style.display = 'none';
     if (video) video.srcObject = null;
@@ -1625,12 +1627,18 @@ function stopReceiptCameraStream() {
         const label = openCameraBtn.querySelector('span');
         if (label) label.textContent = 'Зробити фото';
     }
+    if (placeholder) {
+        const previewVisible = preview && preview.style.display !== 'none';
+        placeholder.style.display = previewVisible ? 'none' : 'flex';
+    }
 }
 
 async function openReceiptCamera() {
     const openCameraBtn = document.getElementById('openCameraBtn');
     const streamWrapper = document.getElementById('receiptCameraStreamWrapper');
     const video = document.getElementById('receiptCameraStream');
+    const placeholder = document.getElementById('receiptCameraPlaceholder');
+    const preview = document.getElementById('receiptPreview');
 
     if (!openCameraBtn || !streamWrapper || !video) {
         toastManager.show('Камеру не знайдено. Оновіть сторінку та спробуйте знову', 'error');
@@ -1647,6 +1655,7 @@ async function openReceiptCamera() {
     if (!isCapturing) {
         try {
             stopReceiptCameraStream();
+            if (preview) preview.style.display = 'none';
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: { ideal: 'environment' }
@@ -1661,6 +1670,7 @@ async function openReceiptCamera() {
             openCameraBtn.dataset.mode = 'capture';
             const label = openCameraBtn.querySelector('span');
             if (label) label.textContent = 'Зробити знімок';
+            if (placeholder) placeholder.style.display = 'none';
         } catch (error) {
             console.error('Receipt camera error:', error);
             toastManager.show('Не вдалося отримати доступ до камери', 'error');
@@ -1718,10 +1728,12 @@ function showReceiptScanScreen() {
     const processBtn = document.getElementById('processReceiptBtn');
     const actions = document.getElementById('receiptCameraActions');
     const previewImage = document.getElementById('receiptPreviewImage');
+    const placeholder = document.getElementById('receiptCameraPlaceholder');
     if (preview) preview.style.display = 'none';
     if (previewImage) previewImage.src = '';
     if (processBtn) processBtn.style.display = 'none';
     if (actions) actions.style.display = 'flex';
+    if (placeholder) placeholder.style.display = 'flex';
 }
 
 function applyReceiptPhotoFile(file) {
@@ -1738,6 +1750,7 @@ function applyReceiptPhotoFile(file) {
     const previewImage = document.getElementById('receiptPreviewImage');
     const processBtn = document.getElementById('processReceiptBtn');
     const actions = document.getElementById('receiptCameraActions');
+    const placeholder = document.getElementById('receiptCameraPlaceholder');
 
     if (previewImage) {
         const previewUrl = URL.createObjectURL(file);
@@ -1748,6 +1761,7 @@ function applyReceiptPhotoFile(file) {
     if (preview) preview.style.display = 'block';
     if (processBtn) processBtn.style.display = 'block';
     if (actions) actions.style.display = 'flex';
+    if (placeholder) placeholder.style.display = 'none';
 }
 
 function retakeReceiptPhoto() {
@@ -1759,9 +1773,11 @@ function retakeReceiptPhoto() {
     const preview = document.getElementById('receiptPreview');
     const processBtn = document.getElementById('processReceiptBtn');
     const actions = document.getElementById('receiptCameraActions');
+    const placeholder = document.getElementById('receiptCameraPlaceholder');
     if (preview) preview.style.display = 'none';
     if (processBtn) processBtn.style.display = 'none';
     if (actions) actions.style.display = 'flex';
+    if (placeholder) placeholder.style.display = 'flex';
 }
 
 async function processReceipt() {

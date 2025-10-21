@@ -1892,31 +1892,76 @@ body.test-mode .app-header {
 .receipt-camera-area {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 1rem;
+    gap: 1.5rem;
+    align-items: stretch;
 }
 
-.receipt-camera-actions {
+.receipt-camera-view {
+    position: relative;
     display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    align-items: center;
+    justify-content: center;
     width: 100%;
+    aspect-ratio: 3 / 4;
+    min-height: 320px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(56, 189, 248, 0.12));
+    border: 2px dashed rgba(99, 102, 241, 0.25);
+    box-shadow: var(--shadow-card);
 }
 
-.receipt-camera-button {
+.receipt-camera-placeholder {
+    position: absolute;
+    inset: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--muted-foreground);
+    backdrop-filter: blur(2px);
+}
+
+.receipt-camera-placeholder i {
+    width: 3.5rem;
+    height: 3.5rem;
+    color: var(--primary);
+}
+
+.receipt-camera-controls {
+    display: flex;
+    flex-direction: column;
     gap: 1rem;
+}
+
+.receipt-camera-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
     width: 100%;
-    min-height: 300px;
-    background: var(--gradient-card);
-    border: 3px dashed var(--border);
-    border-radius: var(--radius);
+    padding: 1rem 1.5rem;
+    border-radius: 999px;
+    border: none;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.3s var(--transition-smooth);
-    box-shadow: var(--shadow-card);
+    background: var(--primary);
+    color: white;
+    box-shadow: var(--shadow-button);
+}
+
+.receipt-camera-button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-button), 0 10px 25px rgba(99, 102, 241, 0.25);
+}
+
+.receipt-camera-button i {
+    width: 1.5rem;
+    height: 1.5rem;
 }
 
 .receipt-gallery-button {
@@ -1925,14 +1970,14 @@ body.test-mode .app-header {
     justify-content: center;
     gap: 0.75rem;
     width: 100%;
-    padding: 1rem 1.25rem;
+    padding: 1rem 1.5rem;
+    border-radius: 999px;
+    border: 2px solid var(--border);
     background: var(--card);
-    border: 2px dashed var(--border);
-    border-radius: var(--radius);
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.3s var(--transition-smooth);
     box-shadow: var(--shadow-soft);
-    font-weight: 600;
 }
 
 .receipt-gallery-button i {
@@ -1947,16 +1992,19 @@ body.test-mode .app-header {
     box-shadow: var(--shadow-button);
 }
 
-.receipt-camera-button:hover {
-    border-color: var(--primary);
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-button), 0 0 20px rgba(99, 102, 241, 0.15);
-}
+@media (min-width: 768px) {
+    .receipt-camera-controls {
+        flex-direction: row;
+        align-items: center;
+    }
 
-.camera-icon-large {
-    width: 4rem;
-    height: 4rem;
-    color: var(--primary);
+    .receipt-camera-button {
+        flex: 1.2;
+    }
+
+    .receipt-gallery-button {
+        flex: 0.8;
+    }
 }
 
 .receipt-camera-button span {
@@ -1966,21 +2014,14 @@ body.test-mode .app-header {
 }
 
 .receipt-camera-stream {
+    position: absolute;
+    inset: 0;
     display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    width: 100%;
-    padding: 1rem;
-    border-radius: var(--radius);
-    border: 2px solid var(--border);
-    box-shadow: var(--shadow-card);
 }
 
 .receipt-camera-stream video {
     width: 100%;
-    border-radius: var(--radius);
-    background: black;
-    max-height: 500px;
+    height: 100%;
     object-fit: cover;
 }
 
@@ -2034,19 +2075,23 @@ body.test-mode .app-header {
 }
 
 .receipt-preview {
-    width: 100%;
+    position: absolute;
+    inset: 0;
     display: flex;
     flex-direction: column;
+    justify-content: flex-end;
     gap: 1rem;
+    padding: 1rem;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.05) 0%, rgba(15, 23, 42, 0.45) 100%);
 }
 
 .receipt-preview img {
     width: 100%;
-    max-height: 500px;
+    height: 100%;
+    flex: 1 1 auto;
     object-fit: contain;
     border-radius: var(--radius);
-    box-shadow: var(--shadow-card);
-    background: var(--muted);
+    background: rgba(15, 23, 42, 0.75);
 }
 
 .retake-photo-btn {
@@ -2054,22 +2099,21 @@ body.test-mode .app-header {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    background: var(--muted);
-    color: var(--foreground);
-    border: 2px solid var(--border);
-    border-radius: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(15, 23, 42, 0.85);
+    color: white;
+    border: none;
+    border-radius: 999px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s var(--transition-smooth);
-    box-shadow: var(--shadow-soft);
+    box-shadow: var(--shadow-button);
+    align-self: center;
 }
 
 .retake-photo-btn:hover {
-    border-color: var(--primary);
-    background: var(--card);
     transform: translateY(-2px);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-button), 0 10px 25px rgba(15, 23, 42, 0.4);
 }
 
 .retake-photo-btn i {
@@ -2340,21 +2384,28 @@ body.test-mode .app-header {
     background: var(--gradient-success);
 }
 
-[data-theme="dark"] .receipt-camera-button {
-    border-color: rgba(129, 140, 248, 0.3);
+[data-theme="dark"] .receipt-camera-view {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(17, 24, 39, 0.85));
+    border-color: rgba(99, 102, 241, 0.35);
 }
 
-[data-theme="dark"] .receipt-camera-button:hover {
-    border-color: var(--primary);
+[data-theme="dark"] .receipt-camera-placeholder {
+    color: rgba(226, 232, 240, 0.75);
+}
+
+[data-theme="dark"] .receipt-camera-button {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.95), rgba(56, 189, 248, 0.85));
+    color: white;
 }
 
 [data-theme="dark"] .receipt-gallery-button {
     background: rgba(30, 41, 59, 0.85);
-    border-color: rgba(148, 163, 184, 0.25);
+    border-color: rgba(148, 163, 184, 0.35);
+    color: rgba(226, 232, 240, 0.95);
 }
 
 [data-theme="dark"] .receipt-gallery-button:hover {
-    border-color: var(--primary);
+    border-color: rgba(148, 163, 184, 0.65);
     background: rgba(30, 41, 59, 0.95);
 }
 
