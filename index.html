@@ -23,7 +23,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans:wght@400;500;600;700&display=swap&subset=cyrillic" rel="stylesheet">
-    <link rel="preload" href="fonts/NotoSans-Regular.ttf" as="font" type="font/ttf" crossorigin>
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5">
@@ -383,27 +382,35 @@
 
                 <div class="receipt-scan-container">
                     <div class="receipt-camera-area">
-                        <div class="receipt-camera-actions" id="receiptCameraActions">
-                            <button class="receipt-camera-button glassmorphism" id="openCameraBtn" type="button">
-                                <i data-lucide="camera" class="camera-icon-large"></i>
+                        <div class="receipt-camera-view">
+                            <div class="receipt-camera-placeholder" id="receiptCameraPlaceholder">
+                                <i data-lucide="camera"></i>
+                                <p>Наведіть камеру на чек або завантажте фото</p>
+                            </div>
+
+                            <div class="receipt-camera-stream" id="receiptCameraStreamWrapper" style="display: none;">
+                                <video id="receiptCameraStream" autoplay playsinline></video>
+                            </div>
+
+                            <div class="receipt-preview" id="receiptPreview" style="display: none;">
+                                <img id="receiptPreviewImage" alt="Фото чека">
+                                <button class="retake-photo-btn" id="retakePhotoBtn" type="button">
+                                    <i data-lucide="refresh-cw"></i>
+                                    <span>Перефотографувати</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="receipt-camera-controls" id="receiptCameraActions">
+                            <button class="receipt-camera-button" id="openCameraBtn" type="button">
+                                <i data-lucide="camera"></i>
                                 <span>Зробити фото</span>
                             </button>
-                            <button class="receipt-gallery-button glassmorphism" id="chooseReceiptPhotoBtn" type="button">
+                            <button class="receipt-gallery-button" id="chooseReceiptPhotoBtn" type="button">
                                 <i data-lucide="image"></i>
                                 <span>Завантажити фото</span>
                             </button>
-                        </div>
-
-                        <div class="receipt-camera-stream" id="receiptCameraStreamWrapper" style="display: none;">
-                            <video id="receiptCameraStream" autoplay playsinline></video>
-                        </div>
-
-                        <div class="receipt-preview" id="receiptPreview" style="display: none;">
-                            <img id="receiptPreviewImage" alt="Фото чека">
-                            <button class="retake-photo-btn" id="retakePhotoBtn" type="button">
-                                <i data-lucide="refresh-cw"></i>
-                                <span>Перефотографувати</span>
-                            </button>
+                            <input type="file" id="receiptPhotoInput" accept="image/*" style="display: none;">
                         </div>
                     </div>
 
@@ -478,6 +485,55 @@
     </nav>
 
     <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Modal для редагування розпізнаного товару -->
+    <div class="modal-overlay" id="recognizedItemEditModal">
+        <div class="modal-content glassmorphism recognized-edit-modal">
+            <div class="modal-header">
+                <h3>Редагувати товар</h3>
+                <button class="modal-close" id="closeRecognizedEditBtn" type="button">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <form class="recognized-edit-form" id="recognizedEditForm">
+                <div class="form-group">
+                    <label for="recognizedEditName">Назва товару</label>
+                    <input id="recognizedEditName" name="recognizedEditName" placeholder="Наприклад, Помідори" required type="text" />
+                    <div class="field-error" id="recognizedEditName-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="recognizedEditQuantity">Кількість</label>
+                    <input id="recognizedEditQuantity" min="0" name="recognizedEditQuantity" required step="0.01" type="number" />
+                    <div class="field-error" id="recognizedEditQuantity-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="recognizedEditUnit">Одиниця виміру</label>
+                    <select id="recognizedEditUnit" name="recognizedEditUnit"></select>
+                </div>
+
+                <div class="form-group">
+                    <label for="recognizedEditPrice">Ціна за одиницю (₴)</label>
+                    <input id="recognizedEditPrice" min="0" name="recognizedEditPrice" required step="0.01" type="number" />
+                    <div class="field-error" id="recognizedEditPrice-error"></div>
+                </div>
+
+                <div class="recognized-edit-summary">
+                    <span>Загальна сума</span>
+                    <strong id="recognizedEditTotal">0.00 ₴</strong>
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn-secondary" id="recognizedEditCancelBtn" type="button">Скасувати</button>
+                    <button class="btn-primary" type="submit">
+                        <i data-lucide="save"></i>
+                        <span>Зберегти</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Modal для перегляду/редагування товару в чернетці -->
     <div class="modal-overlay" id="itemViewModal">
