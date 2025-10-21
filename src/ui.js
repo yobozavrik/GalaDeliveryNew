@@ -302,7 +302,6 @@ class AppUIAdapter {
             'drafts-list': document.getElementById('draftsListScreen'),
             'draft-view': document.getElementById('draftViewScreen'),
             'operations-summary': document.getElementById('operationsSummaryScreen'),
-            'operations-detail': document.getElementById('operationsDetailScreen'),
             'purchase-location-selection': document.getElementById('purchaseLocationSelectionScreen'),
             'purchase-drafts-list': document.getElementById('purchaseDraftsListScreen'),
             'purchase-draft-view': document.getElementById('purchaseDraftViewScreen'),
@@ -357,16 +356,6 @@ class AppUIAdapter {
             'purchase-location-selection': () => 'Оберіть локацію закупки',
             'purchase-drafts-list': () => 'Чернетки закупок',
             'purchase-draft-view': () => state.selectedStore ? `Закупка: ${state.selectedStore}` : 'Чернетка закупки',
-            'operations-summary': () => 'Операції сьогодні',
-            'operations-detail': () => {
-                if (state.operationType === 'Закупка') {
-                    return 'Закупка → Локації';
-                }
-                if (state.operationType === 'Відвантаження') {
-                    return 'Відвантаження → Локації';
-                }
-                return 'Операції за локаціями';
-            }
         };
 
         if (screenTitles[state.screen]) {
