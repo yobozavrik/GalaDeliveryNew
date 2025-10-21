@@ -121,6 +121,7 @@ let receiptPhotoFile = null;
 let receiptPhotoSource = null;
 let recognizedItems = [];
 let receiptCameraStream = null;
+let editingRecognizedIndex = null;
 
 // ============================================
 // FORM HANDLERS
@@ -1150,6 +1151,26 @@ function populateUnitSelect() {
     });
 }
 
+function populateRecognizedEditUnits() {
+    const select = document.getElementById('recognizedEditUnit');
+    if (!select) return;
+
+    select.innerHTML = '';
+
+    config.units.forEach(u => {
+        const option = document.createElement('option');
+        option.value = u.value;
+        option.textContent = u.label;
+        select.appendChild(option);
+    });
+}
+
+function clearRecognizedEditErrors() {
+    clearFieldError('recognizedEditName');
+    clearFieldError('recognizedEditQuantity');
+    clearFieldError('recognizedEditPrice');
+}
+
 function handleLocationChange() {
     const select = document.getElementById('location');
     const group = document.getElementById('customLocationGroup');
@@ -1826,6 +1847,155 @@ async function processReceipt() {
     }
 }
 
+function updateRecognizedEditTotal() {
+    const quantityInput = document.getElementById('recognizedEditQuantity');
+    const priceInput = document.getElementById('recognizedEditPrice');
+    const totalElement = document.getElementById('recognizedEditTotal');
+
+    if (!quantityInput || !priceInput || !totalElement) return;
+
+    const quantity = parseFloat(quantityInput.value);
+    const price = parseFloat(priceInput.value);
+
+    if (isNaN(quantity) || isNaN(price)) {
+        totalElement.textContent = '0.00 ₴';
+        return;
+    }
+
+    const total = (quantity * price).toFixed(2);
+    totalElement.textContent = `${total} ₴`;
+}
+
+function closeRecognizedEditModal() {
+    const modal = document.getElementById('recognizedItemEditModal');
+    const form = document.getElementById('recognizedEditForm');
+    const totalElement = document.getElementById('recognizedEditTotal');
+
+    if (form) {
+        form.reset();
+    }
+
+    if (totalElement) {
+        totalElement.textContent = '0.00 ₴';
+    }
+
+    clearRecognizedEditErrors();
+    editingRecognizedIndex = null;
+
+    if (modal) {
+        modal.classList.remove('visible');
+    }
+}
+
+function editRecognizedItem(index) {
+    const item = recognizedItems[index];
+    const modal = document.getElementById('recognizedItemEditModal');
+    const nameInput = document.getElementById('recognizedEditName');
+    const quantityInput = document.getElementById('recognizedEditQuantity');
+    const priceInput = document.getElementById('recognizedEditPrice');
+    const unitSelect = document.getElementById('recognizedEditUnit');
+
+    if (!item || !modal || !nameInput || !quantityInput || !priceInput || !unitSelect) {
+        toastManager.show('Не вдалося відкрити редагування товару', 'error');
+        return;
+    }
+
+    editingRecognizedIndex = index;
+    clearRecognizedEditErrors();
+
+    const sanitizedName = InputValidator.sanitizeString(item.productName || '');
+    nameInput.value = sanitizedName;
+
+    const quantityValue = typeof item.quantity === 'number'
+        ? item.quantity
+        : parseFloat(item.quantity) || 0;
+    quantityInput.value = quantityValue.toString();
+
+    const priceValue = typeof item.pricePerUnit === 'number'
+        ? item.pricePerUnit
+        : parseFloat(item.pricePerUnit) || 0;
+    priceInput.value = priceValue.toFixed(2);
+
+    const unitValue = item.unit || 'piece';
+    const sanitizedUnitValue = InputValidator.sanitizeString(unitValue) || 'piece';
+
+    if (![...unitSelect.options].some(option => option.value === sanitizedUnitValue)) {
+        const fallbackOption = document.createElement('option');
+        fallbackOption.value = sanitizedUnitValue;
+        fallbackOption.textContent = sanitizedUnitValue;
+        unitSelect.appendChild(fallbackOption);
+    }
+
+    unitSelect.value = sanitizedUnitValue;
+
+    updateRecognizedEditTotal();
+
+    modal.classList.add('visible');
+
+    setTimeout(() => {
+        nameInput.focus({ preventScroll: true });
+    }, 50);
+}
+
+function handleRecognizedEditSubmit(event) {
+    event.preventDefault();
+
+    if (editingRecognizedIndex === null || !recognizedItems[editingRecognizedIndex]) {
+        toastManager.show('Немає товару для редагування', 'error');
+        return;
+    }
+
+    const nameInput = document.getElementById('recognizedEditName');
+    const quantityInput = document.getElementById('recognizedEditQuantity');
+    const priceInput = document.getElementById('recognizedEditPrice');
+    const unitSelect = document.getElementById('recognizedEditUnit');
+
+    if (!nameInput || !quantityInput || !priceInput || !unitSelect) {
+        toastManager.show('Форма редагування недоступна', 'error');
+        return;
+    }
+
+    clearRecognizedEditErrors();
+
+    const rawName = nameInput.value.trim();
+    const rawQuantity = quantityInput.value.trim();
+    const rawPrice = priceInput.value.trim();
+    const selectedUnit = unitSelect.value;
+
+    if (!InputValidator.validateProductName(rawName)) {
+        showFieldError('recognizedEditName', 'Назва товару повинна містити від 2 до 100 символів');
+        return;
+    }
+
+    if (!InputValidator.validateQuantity(rawQuantity)) {
+        showFieldError('recognizedEditQuantity', 'Кількість повинна бути більше 0 і не більше 10000');
+        return;
+    }
+
+    if (!InputValidator.validatePrice(rawPrice)) {
+        showFieldError('recognizedEditPrice', 'Ціна повинна бути від 0 до 100000');
+        return;
+    }
+
+    const sanitizedName = InputValidator.sanitizeString(rawName);
+    const quantity = parseFloat(rawQuantity);
+    const pricePerUnit = parseFloat(rawPrice);
+    const totalAmount = parseFloat((quantity * pricePerUnit).toFixed(2));
+
+    recognizedItems[editingRecognizedIndex] = {
+        ...recognizedItems[editingRecognizedIndex],
+        productName: sanitizedName,
+        quantity,
+        unit: selectedUnit,
+        pricePerUnit,
+        totalAmount
+    };
+
+    toastManager.show('Товар оновлено', 'success');
+    closeRecognizedEditModal();
+    showRecognizedItemsScreen();
+}
+
 function showRecognizedItemsScreen() {
     appState.setScreen('recognized-items');
 
@@ -2043,6 +2213,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     appState.updateUI();
     console.log('✅ App initialized successfully!');
 
+    populateRecognizedEditUnits();
+
     // Setup event listeners
     document.getElementById('backButton')?.addEventListener('click', handleBackButton);
     document.getElementById('startPurchaseBtn')?.addEventListener('click', startPurchase);
@@ -2126,6 +2298,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         appState.isDelivery = false;
         setupPurchaseForm();
     });
+
+    document.getElementById('recognizedEditForm')?.addEventListener('submit', handleRecognizedEditSubmit);
+    document.getElementById('recognizedEditCancelBtn')?.addEventListener('click', closeRecognizedEditModal);
+    document.getElementById('closeRecognizedEditBtn')?.addEventListener('click', closeRecognizedEditModal);
+    document.getElementById('recognizedItemEditModal')?.addEventListener('click', (event) => {
+        if (event.target === event.currentTarget) {
+            closeRecognizedEditModal();
+        }
+    });
+    document.getElementById('recognizedEditQuantity')?.addEventListener('input', updateRecognizedEditTotal);
+    document.getElementById('recognizedEditPrice')?.addEventListener('input', updateRecognizedEditTotal);
 
     // Mode toggle
     document.getElementById('modeToggle')?.addEventListener('click', () => {
