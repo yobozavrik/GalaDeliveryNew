@@ -1991,25 +1991,6 @@ body.test-mode .app-header {
     transform: translateY(-2px);
     box-shadow: var(--shadow-button);
 }
-
-.sr-only-file-input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
-
-@media (min-width: 768px) {
-    .receipt-camera-controls {
-        flex-direction: row;
-        align-items: center;
-    }
-
     .receipt-camera-button {
         flex: 1.2;
     }
