@@ -7,7 +7,7 @@
     "dev": "npx serve . -p 3000",
     "start": "npx serve . -p 3000",
     "build": "echo 'No build process needed for vanilla app'",
-    "test": "echo 'Run test files in browser'"
+    "test": "vitest run"
   },
   "keywords": [
     "pwa",
@@ -18,7 +18,9 @@
   "author": "AI Assistant",
   "license": "MIT",
   "devDependencies": {
-    "serve": "^14.2.1"
+    "serve": "^14.2.1",
+    "jsdom": "^24.0.0",
+    "vitest": "^1.4.0"
   },
   "dependencies": {},
   "engines": {
