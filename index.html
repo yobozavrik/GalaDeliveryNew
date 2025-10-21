@@ -383,26 +383,33 @@
 
                 <div class="receipt-scan-container">
                     <div class="receipt-camera-area">
-                        <div class="receipt-camera-actions" id="receiptCameraActions">
-                            <button class="receipt-camera-button glassmorphism" id="openCameraBtn" type="button">
-                                <i data-lucide="camera" class="camera-icon-large"></i>
+                        <div class="receipt-camera-view">
+                            <div class="receipt-camera-placeholder" id="receiptCameraPlaceholder">
+                                <i data-lucide="camera"></i>
+                                <p>Наведіть камеру на чек або завантажте фото</p>
+                            </div>
+
+                            <div class="receipt-camera-stream" id="receiptCameraStreamWrapper" style="display: none;">
+                                <video id="receiptCameraStream" autoplay playsinline></video>
+                            </div>
+
+                            <div class="receipt-preview" id="receiptPreview" style="display: none;">
+                                <img id="receiptPreviewImage" alt="Фото чека">
+                                <button class="retake-photo-btn" id="retakePhotoBtn" type="button">
+                                    <i data-lucide="refresh-cw"></i>
+                                    <span>Перефотографувати</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="receipt-camera-controls" id="receiptCameraActions">
+                            <button class="receipt-camera-button" id="openCameraBtn" type="button">
+                                <i data-lucide="camera"></i>
                                 <span>Зробити фото</span>
                             </button>
-                            <button class="receipt-gallery-button glassmorphism" id="chooseReceiptPhotoBtn" type="button">
+                            <button class="receipt-gallery-button" id="chooseReceiptPhotoBtn" type="button">
                                 <i data-lucide="image"></i>
                                 <span>Завантажити фото</span>
-                            </button>
-                        </div>
-
-                        <div class="receipt-camera-stream" id="receiptCameraStreamWrapper" style="display: none;">
-                            <video id="receiptCameraStream" autoplay playsinline></video>
-                        </div>
-
-                        <div class="receipt-preview" id="receiptPreview" style="display: none;">
-                            <img id="receiptPreviewImage" alt="Фото чека">
-                            <button class="retake-photo-btn" id="retakePhotoBtn" type="button">
-                                <i data-lucide="refresh-cw"></i>
-                                <span>Перефотографувати</span>
                             </button>
                         </div>
                     </div>
