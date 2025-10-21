@@ -83,9 +83,9 @@
                                 <i data-lucide="truck" class="category-icon"></i>
                                 <span class="category-label">Відвантаження</span>
                             </button>
-                            <button class="category-card delivery glassmorphism" id="startDeliveryBtn">
-                                <i data-lucide="package" class="category-icon"></i>
-                                <span class="category-label">Доставка</span>
+                            <button class="category-card operations glassmorphism" id="operationsSummaryBtn">
+                                <i data-lucide="bar-chart-3" class="category-icon"></i>
+                                <span class="category-label">Операції сьогодні</span>
                             </button>
                         </div>
                         <div class="end-day-section">
@@ -150,6 +150,75 @@
 
                 <div class="stores-grid" id="storesGrid">
                     <!-- Магазини будуть додані динамічно -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Екран статистики операцій за сьогодні -->
+        <div class="screen" id="operationsSummaryScreen" style="display: none;">
+            <div class="purchases-page operations-summary-page">
+                <div class="page-header">
+                    <h2>Операції сьогодні</h2>
+                    <p id="operationsSummaryDate">Завантаження...</p>
+                </div>
+
+                <div class="operations-empty" id="operationsEmpty" style="display: none;">
+                    <div class="empty-icon">📊</div>
+                    <p>Сьогодні ще не було відправлених операцій</p>
+                </div>
+
+                <div class="operations-cards" id="operationsCards">
+                    <article class="operation-card glassmorphism" id="purchaseOperationsCard">
+                        <div class="operation-card-header">
+                            <div class="operation-card-icon purchase">
+                                <i data-lucide="shopping-cart"></i>
+                            </div>
+                            <div>
+                                <h3>Закупка</h3>
+                                <p id="purchaseOperationSubtitle">Завантаження...</p>
+                            </div>
+                        </div>
+                        <div class="operation-card-body">
+                            <div class="operation-metric">
+                                <span class="operation-metric-label">Сума</span>
+                                <span class="operation-metric-value" id="purchaseTotalAmount">0,00 ₴</span>
+                            </div>
+                            <div class="operation-metric">
+                                <span class="operation-metric-label">Загальна вага</span>
+                                <span class="operation-metric-value" id="purchaseTotalWeight">—</span>
+                            </div>
+                            <div class="operation-metric">
+                                <span class="operation-metric-label">Товари</span>
+                                <span class="operation-metric-value" id="purchaseProductsList">—</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="operation-card glassmorphism" id="unloadingOperationsCard">
+                        <div class="operation-card-header">
+                            <div class="operation-card-icon unloading">
+                                <i data-lucide="truck"></i>
+                            </div>
+                            <div>
+                                <h3>Відвантаження</h3>
+                                <p id="unloadingOperationSubtitle">Завантаження...</p>
+                            </div>
+                        </div>
+                        <div class="operation-card-body">
+                            <div class="operation-metric">
+                                <span class="operation-metric-label">Сума</span>
+                                <span class="operation-metric-value" id="unloadingTotalAmount">0,00 ₴</span>
+                            </div>
+                            <div class="operation-metric">
+                                <span class="operation-metric-label">Загальна вага</span>
+                                <span class="operation-metric-value" id="unloadingTotalWeight">—</span>
+                            </div>
+                            <div class="operation-metric">
+                                <span class="operation-metric-label">Товари</span>
+                                <span class="operation-metric-value" id="unloadingProductsList">—</span>
+                            </div>
+                        </div>
+                    </article>
                 </div>
             </div>
         </div>

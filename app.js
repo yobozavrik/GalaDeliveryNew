@@ -123,6 +123,13 @@ let recognizedItems = [];
 let receiptCameraStream = null;
 let editingRecognizedIndex = null;
 
+const currencyFormatter = new Intl.NumberFormat('uk-UA', {
+    style: 'currency',
+    currency: 'UAH',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+});
+
 // ============================================
 // FORM HANDLERS
 // ============================================
@@ -267,9 +274,107 @@ async function startUnloading() {
     await showDraftsList();
 }
 
-function startDelivery() {
-    appState.setScreen('purchase-form', { isUnloading: false, isDelivery: true });
-    setupPurchaseForm();
+async function showOperationsSummary() {
+    appState.setScreen('operations-summary', { isUnloading: false, isDelivery: false });
+    await renderOperationsSummary();
+}
+
+function summarizeOperationItems(items) {
+    const totalAmount = items.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0);
+    const totalWeight = items.reduce((sum, item) => {
+        if (item.unit === 'kg') {
+            return sum + (Number(item.quantity) || 0);
+        }
+        return sum;
+    }, 0);
+
+    const uniqueProducts = Array.from(new Set(items.map(item => item.productName).filter(Boolean)));
+
+    return {
+        totalAmount,
+        totalWeight,
+        uniqueProducts
+    };
+}
+
+function formatProductsList(products) {
+    if (!products.length) return '—';
+
+    const preview = products.slice(0, 3).join(', ');
+    const rest = products.length > 3 ? ` +${products.length - 3}` : '';
+    return `${preview}${rest}`;
+}
+
+async function renderOperationsSummary() {
+    const dateElement = document.getElementById('operationsSummaryDate');
+    const purchaseSubtitle = document.getElementById('purchaseOperationSubtitle');
+    const unloadingSubtitle = document.getElementById('unloadingOperationSubtitle');
+    const purchaseAmount = document.getElementById('purchaseTotalAmount');
+    const purchaseWeight = document.getElementById('purchaseTotalWeight');
+    const purchaseProducts = document.getElementById('purchaseProductsList');
+    const unloadingAmount = document.getElementById('unloadingTotalAmount');
+    const unloadingWeight = document.getElementById('unloadingTotalWeight');
+    const unloadingProducts = document.getElementById('unloadingProductsList');
+    const emptyState = document.getElementById('operationsEmpty');
+    const cardsContainer = document.getElementById('operationsCards');
+
+    if (!dateElement || !purchaseSubtitle || !unloadingSubtitle || !purchaseAmount || !purchaseWeight
+        || !purchaseProducts || !unloadingAmount || !unloadingWeight || !unloadingProducts
+        || !emptyState || !cardsContainer) {
+        return;
+    }
+
+    const today = new Date();
+    const formatterOptions = { weekday: 'long', day: '2-digit', month: 'long' };
+    dateElement.textContent = today.toLocaleDateString('uk-UA', formatterOptions);
+
+    const items = await SecureStorageManager.getHistoryItems();
+
+    const isSameDay = (timestamp) => {
+        if (!timestamp) return false;
+        const date = new Date(timestamp);
+        return date.getDate() === today.getDate()
+            && date.getMonth() === today.getMonth()
+            && date.getFullYear() === today.getFullYear();
+    };
+
+    const todaysItems = items.filter(item => isSameDay(item.timestamp));
+    const purchaseItems = todaysItems.filter(item => item.type === 'Закупка');
+    const unloadingItems = todaysItems.filter(item => item.type === 'Відвантаження');
+
+    const purchaseStats = summarizeOperationItems(purchaseItems);
+    const unloadingStats = summarizeOperationItems(unloadingItems);
+
+    const formatAmount = (amount) => currencyFormatter.format(Math.round(amount * 100) / 100);
+    const formatWeight = (weight) => weight > 0 ? `${weight.toFixed(2)} кг` : '—';
+
+    purchaseAmount.textContent = formatAmount(purchaseStats.totalAmount);
+    purchaseWeight.textContent = formatWeight(purchaseStats.totalWeight);
+    purchaseProducts.textContent = formatProductsList(purchaseStats.uniqueProducts);
+    purchaseSubtitle.textContent = purchaseItems.length
+        ? `${purchaseItems.length} ${purchaseItems.length === 1 ? 'операція' : 'операції'}`
+        : 'Немає операцій';
+
+    unloadingAmount.textContent = formatAmount(unloadingStats.totalAmount);
+    unloadingWeight.textContent = formatWeight(unloadingStats.totalWeight);
+    unloadingProducts.textContent = formatProductsList(unloadingStats.uniqueProducts);
+    unloadingSubtitle.textContent = unloadingItems.length
+        ? `${unloadingItems.length} ${unloadingItems.length === 1 ? 'операція' : 'операції'}`
+        : 'Немає операцій';
+
+    const hasOperations = purchaseItems.length > 0 || unloadingItems.length > 0;
+    emptyState.style.display = hasOperations ? 'none' : 'flex';
+    cardsContainer.style.display = hasOperations ? 'grid' : 'none';
+
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+function refreshOperationsSummaryIfVisible() {
+    if (appState.screen === 'operations-summary') {
+        renderOperationsSummary();
+    }
 }
 
 function setupStoreSelection() {
@@ -600,6 +705,8 @@ async function submitDraft() {
                 console.log(`✅ Removed from inventory: ${item.productName} ${item.quantity} ${item.unit}`);
             }
         }
+
+        refreshOperationsSummaryIfVisible();
 
         toastManager.show(`Відправлено ${draft.items.length} ${draft.items.length === 1 ? 'товар' : draft.items.length < 5 ? 'товари' : 'товарів'}`, 'success');
 
@@ -1027,6 +1134,8 @@ async function submitPurchaseDraft() {
             await InventoryManager.addStock(item.productName, item.quantity, item.unit);
             console.log(`✅ Added to inventory: ${item.productName} ${item.quantity} ${item.unit}`);
         }
+
+        refreshOperationsSummaryIfVisible();
 
         toastManager.show(`Відправлено ${draft.items.length} ${draft.items.length === 1 ? 'товар' : draft.items.length < 5 ? 'товари' : 'товарів'}`, 'success');
 
@@ -1464,6 +1573,7 @@ async function handleFormSubmit(event) {
     try {
         // Save to localStorage FIRST (так дані не потеряются)
         await SecureStorageManager.addToHistory(itemData);
+        refreshOperationsSummaryIfVisible();
 
         // Якщо це закупка - додаємо до inventory
         if (type === 'Закупка') {
@@ -1620,6 +1730,7 @@ async function clearHistory() {
         await SecureStorageManager.clearHistory();
         await InventoryManager.clearDailyStock(); // Очищаємо залишки
         await updateHistoryDisplay();
+        refreshOperationsSummaryIfVisible();
         hideAiSummaryModal();
         toastManager.show('Історію та залишки очищено', 'success');
     }
@@ -2213,7 +2324,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('backButton')?.addEventListener('click', handleBackButton);
     document.getElementById('startPurchaseBtn')?.addEventListener('click', startPurchase);
     document.getElementById('startUnloadingBtn')?.addEventListener('click', startUnloading);
-    document.getElementById('startDeliveryBtn')?.addEventListener('click', startDelivery);
+    document.getElementById('operationsSummaryBtn')?.addEventListener('click', showOperationsSummary);
     document.getElementById('purchaseForm')?.addEventListener('submit', handleFormSubmit);
     document.getElementById('photoInput')?.addEventListener('change', handlePhotoSelect);
     document.getElementById('photoButton')?.addEventListener('click', () => {
