@@ -227,7 +227,7 @@ file: [binary photo data]
 
 ### Test
 ```
-POST https://n8n.dmytrotovstytskyi.online/webhook-test/delivery
+POST https://n8n.dmytrotovstytskyi.online/webhook-test/deliverygb
 ```
 
 ### AI Summary (опціонально)
@@ -252,7 +252,7 @@ POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-ex
 ```javascript
 resolveWebhookUrl() {
     const productionUrl = '/api/delivery';
-    const testUrl = 'https://n8n.dmytrotovstytskyi.online/webhook-test/delivery';
+    const testUrl = 'https://n8n.dmytrotovstytskyi.online/webhook-test/deliverygb';
     return this.isTestMode ? testUrl : productionUrl;
 }
 ```
