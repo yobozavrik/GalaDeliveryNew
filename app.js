@@ -16,6 +16,7 @@ import {
     ThemeManager,
     AppUIAdapter
 } from './src/ui.js';
+import { generateUnloadingReport } from './src/pdf.js';
 
 // Optimized and secured GalaBaluvanaDelivery App
 
@@ -584,6 +585,7 @@ async function submitDraft() {
     }
 
     try {
+        const submissionTimestamp = new Date();
         // Відправляємо всю заявку одним запитом
         await SecureApiClient.sendUnloadingBatch(storeName, draft.items);
 
@@ -599,6 +601,19 @@ async function submitDraft() {
         }
 
         toastManager.show(`Відправлено ${draft.items.length} ${draft.items.length === 1 ? 'товар' : draft.items.length < 5 ? 'товари' : 'товарів'}`, 'success');
+
+        const totalAmount = draft.items.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0);
+        const totalAmountText = Number.isFinite(totalAmount) ? totalAmount.toFixed(2) : '0.00';
+        try {
+            await generateUnloadingReport({
+                storeName,
+                items: draft.items,
+                submittedAt: submissionTimestamp,
+                summary: `Відвантаження ${draft.items.length} позицій на суму ${totalAmountText} ₴.`
+            });
+        } catch (pdfError) {
+            console.warn('Не вдалося створити PDF-звіт:', pdfError);
+        }
 
         // Видаляємо чернетку після успішної відправки
         await DraftManager.deleteDraft(storeName);
@@ -1601,14 +1616,103 @@ function stopReceiptCameraStream() {
 
     const streamWrapper = document.getElementById('receiptCameraStreamWrapper');
     const video = document.getElementById('receiptCameraStream');
+    const openCameraBtn = document.getElementById('openCameraBtn');
 
     if (streamWrapper) streamWrapper.style.display = 'none';
     if (video) video.srcObject = null;
+    if (openCameraBtn) {
+        openCameraBtn.dataset.mode = 'stream';
+        const label = openCameraBtn.querySelector('span');
+        if (label) label.textContent = 'Зробити фото';
+    }
+}
+
+async function openReceiptCamera() {
+    const openCameraBtn = document.getElementById('openCameraBtn');
+    const streamWrapper = document.getElementById('receiptCameraStreamWrapper');
+    const video = document.getElementById('receiptCameraStream');
+
+    if (!openCameraBtn || !streamWrapper || !video) {
+        toastManager.show('Камеру не знайдено. Оновіть сторінку та спробуйте знову', 'error');
+        return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+        toastManager.show('Ваш пристрій не підтримує камеру або доступ заборонено', 'error');
+        return;
+    }
+
+    const isCapturing = openCameraBtn.dataset.mode === 'capture';
+
+    if (!isCapturing) {
+        try {
+            stopReceiptCameraStream();
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { ideal: 'environment' }
+                }
+            });
+
+            receiptCameraStream = stream;
+            video.srcObject = stream;
+            streamWrapper.style.display = 'block';
+            await video.play().catch(() => {});
+
+            openCameraBtn.dataset.mode = 'capture';
+            const label = openCameraBtn.querySelector('span');
+            if (label) label.textContent = 'Зробити знімок';
+        } catch (error) {
+            console.error('Receipt camera error:', error);
+            toastManager.show('Не вдалося отримати доступ до камери', 'error');
+        }
+        return;
+    }
+
+    if (!video.videoWidth || !video.videoHeight) {
+        toastManager.show('Камера ще не готова. Зачекайте та спробуйте знову', 'warning');
+        return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+        toastManager.show('Не вдалося обробити зображення з камери', 'error');
+        stopReceiptCameraStream();
+        return;
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    try {
+        const blob = await new Promise((resolve, reject) => {
+            canvas.toBlob((result) => {
+                if (result) {
+                    resolve(result);
+                } else {
+                    reject(new Error('Не вдалося зберегти фото'));
+                }
+            }, 'image/jpeg', 0.95);
+        });
+
+        const file = new File([blob], `receipt-${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
+        receiptPhotoSource = 'camera';
+        applyReceiptPhotoFile(file);
+    } catch (error) {
+        console.error('Receipt capture error:', error);
+        toastManager.show('Не вдалося зробити фото чека', 'error');
+    } finally {
+        stopReceiptCameraStream();
+    }
 }
 
 function showReceiptScanScreen() {
+    stopReceiptCameraStream();
     appState.setScreen('receipt-scan');
     receiptPhotoFile = null;
+    receiptPhotoSource = null;
 
     const preview = document.getElementById('receiptPreview');
     const processBtn = document.getElementById('processReceiptBtn');
@@ -1648,9 +1752,10 @@ function applyReceiptPhotoFile(file) {
 }
 
 function retakeReceiptPhoto() {
-    const previousSource = receiptPhotoSource;
     receiptPhotoFile = null;
     receiptPhotoSource = null;
+
+    stopReceiptCameraStream();
 
     const preview = document.getElementById('receiptPreview');
     const processBtn = document.getElementById('processReceiptBtn');
@@ -1986,6 +2091,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('openCameraBtn')?.addEventListener('click', openReceiptCamera);
     document.getElementById('chooseReceiptPhotoBtn')?.addEventListener('click', () => {
+        const input = document.getElementById('receiptPhotoInput');
+        input?.click();
+    });
+    document.getElementById('receiptPhotoInput')?.addEventListener('change', (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        receiptPhotoSource = 'gallery';
+        applyReceiptPhotoFile(file);
+        event.target.value = '';
+    });
     document.getElementById('retakePhotoBtn')?.addEventListener('click', retakeReceiptPhoto);
     document.getElementById('processReceiptBtn')?.addEventListener('click', processReceipt);
     document.getElementById('confirmRecognizedItemsBtn')?.addEventListener('click', confirmRecognizedItems);

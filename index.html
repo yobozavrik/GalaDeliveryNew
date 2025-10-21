@@ -22,7 +22,8 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans:wght@400;500;600;700&display=swap&subset=cyrillic" rel="stylesheet">
+    <link rel="preload" href="fonts/NotoSans-Regular.ttf" as="font" type="font/ttf" crossorigin>
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#4f46e5">
@@ -382,6 +383,7 @@
 
                 <div class="receipt-scan-container">
                     <div class="receipt-camera-area">
+                        <input type="file" id="receiptPhotoInput" accept="image/*" capture="environment" style="display: none;">
 
                         <div class="receipt-camera-actions" id="receiptCameraActions">
                             <button class="receipt-camera-button glassmorphism" id="openCameraBtn" type="button">
@@ -392,6 +394,10 @@
                                 <i data-lucide="image"></i>
                                 <span>Завантажити фото</span>
                             </button>
+                        </div>
+
+                        <div class="receipt-camera-stream" id="receiptCameraStreamWrapper" style="display: none;">
+                            <video id="receiptCameraStream" autoplay playsinline></video>
                         </div>
 
                         <div class="receipt-preview" id="receiptPreview" style="display: none;">
@@ -555,8 +561,9 @@
     </div>
 
     <!-- Скрипти -->
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="importmap" src="import-map.json"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <script src="app.js" type="module"></script>
 </body>
 </html>
