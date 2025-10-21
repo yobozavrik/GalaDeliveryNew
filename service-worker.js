@@ -1,16 +1,82 @@
 // Optimized Service Worker with advanced caching strategies
-const CACHE_NAME = 'zakupka-app-v4';
-const RUNTIME_CACHE = 'zakupka-runtime-v4';
+const CACHE_NAME = 'zakupka-app-v5';
+const RUNTIME_CACHE = 'zakupka-runtime-v5';
+const NETWORK_TIMEOUT = 5000;
 
 const PRECACHE_URLS = [
     '/',
     '/index.html',
     '/styles.css',
     '/app.js',
+    '/src/config.js',
+    '/src/state.js',
+    '/src/ui.js',
+    '/src/network.js',
+    '/src/pdf.js',
+    '/src/validation.js',
     'https://unpkg.com/lucide@latest/dist/umd/lucide.js',
     'https://cdn.jsdelivr.net/npm/chart.js',
     'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
 ];
+
+function createOfflineResponse(request) {
+    const baseHeaders = { 'Cache-Control': 'no-store' };
+
+    switch (request.destination) {
+        case 'script':
+        case 'worker':
+            return new Response('/* Offline: script unavailable */', {
+                status: 503,
+                headers: {
+                    ...baseHeaders,
+                    'Content-Type': 'application/javascript'
+                }
+            });
+        case 'style':
+            return new Response('/* Offline: styles unavailable */', {
+                status: 503,
+                headers: {
+                    ...baseHeaders,
+                    'Content-Type': 'text/css'
+                }
+            });
+        case 'image':
+            return new Response('', {
+                status: 503,
+                headers: {
+                    ...baseHeaders,
+                    'Content-Type': 'image/svg+xml'
+                }
+            });
+        default:
+            return new Response(JSON.stringify({
+                error: 'Offline',
+                message: 'No network connection',
+                url: request.url
+            }), {
+                status: 503,
+                headers: {
+                    ...baseHeaders,
+                    'Content-Type': 'application/json'
+                }
+            });
+    }
+}
+
+async function fetchWithTimeout(request, timeout = NETWORK_TIMEOUT) {
+    if (!timeout) {
+        return fetch(request);
+    }
+
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+
+    try {
+        return await fetch(request, { signal: controller.signal });
+    } finally {
+        clearTimeout(id);
+    }
+}
 
 // Precache essential resources
 async function precache() {
@@ -51,7 +117,7 @@ async function networkFirst(request) {
     const cache = await caches.open(RUNTIME_CACHE);
 
     try {
-        const networkResponse = await fetch(request, { timeout: 5000 });
+        const networkResponse = await fetchWithTimeout(request);
 
         if (networkResponse && networkResponse.status === 200) {
             cache.put(request, networkResponse.clone());
@@ -66,14 +132,7 @@ async function networkFirst(request) {
             return cachedResponse;
         }
 
-        // Return offline page or error
-        return new Response(JSON.stringify({
-            error: 'Offline',
-            message: 'No network connection'
-        }), {
-            headers: { 'Content-Type': 'application/json' },
-            status: 503
-        });
+        return createOfflineResponse(request);
     }
 }
 
@@ -96,7 +155,7 @@ async function cacheFirst(request) {
         return networkResponse;
     } catch (error) {
         console.error('[SW] Fetch failed:', error);
-        throw error;
+        return createOfflineResponse(request);
     }
 }
 
@@ -110,7 +169,7 @@ async function staleWhileRevalidate(request) {
             cache.put(request, networkResponse.clone());
         }
         return networkResponse;
-    }).catch(() => cachedResponse);
+    }).catch(() => cachedResponse || createOfflineResponse(request));
 
     return cachedResponse || fetchPromise;
 }
