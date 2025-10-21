@@ -27,6 +27,11 @@
     --gradient-success: linear-gradient(135deg, #34d399 0%, #10b981 100%);
     --gradient-danger: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
     --gradient-card: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --content-max-width: 600px;
 }
 
 /* Improved Dark Theme Palette */
@@ -61,6 +66,11 @@
     box-sizing: border-box;
 }
 
+html {
+    height: 100%;
+    -webkit-text-size-adjust: 100%;
+}
+
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: radial-gradient(ellipse at top, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
@@ -72,6 +82,25 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
+    padding-inline: max(var(--safe-left), 0px) max(var(--safe-right), 0px);
+    padding-bottom: max(var(--safe-bottom), 0px);
+}
+
+button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.category-card,
+.store-card,
+.method-card,
+.draft-card,
+.recognized-item-card,
+.draft-item-view,
+.draft-item-edit,
+.recognized-item-edit,
+.recognized-item-delete {
+    touch-action: manipulation;
 }
 
 .glassmorphism {
@@ -98,6 +127,8 @@ body {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
+    padding-top: calc(0.5rem + var(--safe-top));
+    padding-bottom: 0.5rem;
 }
 
 [data-theme="dark"] .app-header {
@@ -107,9 +138,12 @@ body {
 .header-content {
     display: flex;
     align-items: center;
-    height: 3.5rem;
-    padding: 0 1rem;
-    max-width: 600px;
+    gap: 0.75rem;
+    min-height: 3.5rem;
+    padding-inline: 1rem;
+    padding-left: calc(1rem + var(--safe-left));
+    padding-right: calc(1rem + var(--safe-right));
+    width: min(100%, var(--content-max-width));
     margin: 0 auto;
 }
 
@@ -196,13 +230,13 @@ body.test-mode .app-header {
 .header-title {
     flex: 1;
     text-align: center;
-    font-size: 1.125rem;
+    font-size: clamp(1.05rem, 4vw, 1.35rem);
     font-weight: 600;
 }
 
 .main-content {
-    padding-bottom: 5rem;
-    max-width: 600px;
+    padding-bottom: calc(5rem + var(--safe-bottom));
+    width: min(100%, var(--content-max-width));
     margin: 0 auto;
 }
 
@@ -986,8 +1020,9 @@ body.test-mode .app-header {
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     border-top: 1px solid var(--border);
     display: flex;
-    height: 4rem;
-    max-width: 600px;
+    gap: 0.5rem;
+    padding: 0.5rem 1.25rem calc(0.5rem + var(--safe-bottom));
+    max-width: var(--content-max-width);
     margin: 0 auto;
     box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
 }
@@ -1043,7 +1078,7 @@ body.test-mode .app-header {
 
 .toast-container {
     position: fixed;
-    bottom: 5rem;
+    bottom: calc(4.5rem + var(--safe-bottom));
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
@@ -1051,6 +1086,8 @@ body.test-mode .app-header {
     flex-direction: column;
     gap: 0.5rem;
     align-items: center;
+    width: min(100%, var(--content-max-width));
+    padding-inline: 1rem;
 }
 
 .toast {
@@ -1118,6 +1155,101 @@ body.test-mode .app-header {
 /* Performance optimizations */
 .category-card, .save-button, .end-day-button {
     will-change: transform;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .app-header {
+        padding-bottom: 0.75rem;
+    }
+
+    .header-actions {
+        gap: 0.5rem;
+    }
+
+    .mode-toggle {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.7rem;
+    }
+
+    .theme-toggle,
+    .back-button {
+        width: 2.25rem;
+        height: 2.25rem;
+    }
+
+    .main-content {
+        padding-bottom: calc(6.5rem + var(--safe-bottom));
+    }
+
+    .page-header {
+        padding: 1.25rem 1rem 1rem;
+    }
+
+    .current-date-widget {
+        margin: 0 0.75rem 1.25rem 0.75rem;
+        padding: 0.875rem 1.25rem;
+    }
+
+    .drafts-list,
+    .recognized-items-list {
+        padding-bottom: calc(7rem + var(--safe-bottom));
+    }
+}
+
+@media (max-width: 480px) {
+    .categories-grid {
+        padding: 0 0.75rem;
+    }
+
+    .category-row {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .category-card {
+        padding: 1.5rem 1.25rem;
+    }
+
+    .category-card.start-purchase {
+        grid-column: auto;
+    }
+
+    .category-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+
+    .stores-grid,
+    .method-selection-grid {
+        grid-template-columns: 1fr;
+        padding: 0 0.75rem;
+    }
+
+    .store-card,
+    .method-card {
+        padding: 1.5rem 1.25rem;
+    }
+
+    .draft-card,
+    .recognized-item-card,
+    .cart-item {
+        padding: 0.875rem 1rem;
+    }
+
+    .form-container {
+        padding: 1.25rem;
+    }
+
+    .modal-content {
+        width: 92%;
+        padding: 1.5rem;
+    }
+
+    .bottom-navigation {
+        padding-left: calc(0.75rem + var(--safe-left));
+        padding-right: calc(0.75rem + var(--safe-right));
+    }
 }
 
 /* Reduced motion support */
@@ -1241,7 +1373,7 @@ body.test-mode .app-header {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    padding: 0 1rem 5rem 1rem;
+    padding: 0 1rem calc(5rem + var(--safe-bottom)) 1rem;
 }
 
 .draft-card {
@@ -1394,9 +1526,11 @@ body.test-mode .app-header {
     bottom: 0;
     left: 0;
     right: 0;
-    max-width: 600px;
+    max-width: var(--content-max-width);
     margin: 0 auto;
-    padding: 1rem;
+    padding: 1rem 1.25rem calc(1rem + var(--safe-bottom));
+    padding-left: calc(1.25rem + var(--safe-left));
+    padding-right: calc(1.25rem + var(--safe-right));
     background: var(--background);
     border-top: 1px solid var(--border);
     display: flex;
@@ -1445,10 +1579,10 @@ body.test-mode .app-header {
 /* Fixed Bottom Button */
 .fixed-bottom-button {
     position: fixed;
-    bottom: 1rem;
-    left: 1rem;
-    right: 1rem;
-    max-width: 600px;
+    bottom: calc(1rem + var(--safe-bottom));
+    left: calc(1rem + var(--safe-left));
+    right: calc(1rem + var(--safe-right));
+    max-width: var(--content-max-width);
     margin: 0 auto;
 }
 
@@ -1945,8 +2079,7 @@ body.test-mode .app-header {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    padding: 0 1rem;
-    margin-bottom: 6rem;
+    padding: 0 1rem calc(6rem + var(--safe-bottom));
 }
 
 .recognized-item-card {
@@ -2041,9 +2174,11 @@ body.test-mode .app-header {
     bottom: 0;
     left: 0;
     right: 0;
-    max-width: 600px;
+    max-width: var(--content-max-width);
     margin: 0 auto;
-    padding: 1rem;
+    padding: 1rem 1.25rem calc(1rem + var(--safe-bottom));
+    padding-left: calc(1.25rem + var(--safe-left));
+    padding-right: calc(1.25rem + var(--safe-right));
     background: var(--background);
     border-top: 1px solid var(--border);
     display: flex;

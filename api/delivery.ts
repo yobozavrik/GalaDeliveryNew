@@ -1,6 +1,6 @@
 const N8N_URL =
   (process?.env?.N8N_WEBHOOK_URL as string) ||
-  'https://n8n.dmytrotovstytskyi.online/webhook/delivery';
+  'https://n8n.dmytrotovstytskyi.online/webhook/deliverygb';
 
 export const config = {
   api: {
