@@ -1,0 +1,27 @@
+{
+  "name": "oblík-zakupivel",
+  "version": "2.0.0",
+  "description": "PWA додаток для обліку закупівель, розвантаження та доставки товарів",
+  "main": "app.js",
+  "scripts": {
+    "dev": "npx serve . -p 3000",
+    "start": "npx serve . -p 3000",
+    "build": "echo 'No build process needed for vanilla app'",
+    "test": "echo 'Run test files in browser'"
+  },
+  "keywords": [
+    "pwa",
+    "закупівлі",
+    "inventory",
+    "ukraine"
+  ],
+  "author": "AI Assistant",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.1"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

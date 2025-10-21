@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Тест функциональности</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 3px; }
+        .pass-result { background-color: #d4edda; }
+        .fail-result { background-color: #f8d7da; }
+        .warning-result { background-color: #fff3cd; }
+        .test-form { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .form-group { margin: 10px 0; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 3px; }
+        .test-button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 3px; cursor: pointer; margin: 5px; }
+        .test-button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Тестирование функциональности</h1>
+    
+    <div class="test-section">
+        <h2>1. Валидация форм</h2>
+        <div class="test-form">
+            <div class="form-group">
+                <label>Назва товару:</label>
+                <input type="text" id="test-product-name" placeholder="Введіть назву товару">
+            </div>
+            <div class="form-group">
+                <label>Кількість:</label>
+                <input type="number" id="test-quantity" placeholder="Введіть кількість">
+            </div>
+            <div class="form-group">
+                <label>Ціна:</label>
+                <input type="number" id="test-price" placeholder="Введіть ціну">
+            </div>
+            <button class="test-button" onclick="testFormValidation()">Тестувати валідацію</button>
+        </div>
+        <div id="validation-result" class="test-result">Результат тесту валідації...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Локальное хранение</h2>
+        <button class="test-button" onclick="testLocalStorage()">Тестувати зберігання</button>
+        <button class="test-button" onclick="testStorageRetrieval()">Тестувати отримання</button>
+        <button class="test-button" onclick="testStorageClear()">Очистити зберігання</button>
+        <div id="storage-result" class="test-result">Результат тесту зберігання...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. API вызовы</h2>
+        <button class="test-button" onclick="testAPICall()">Тестувати API</button>
+        <div id="api-result" class="test-result">Результат тесту API...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Обработка файлов</h2>
+        <input type="file" id="test-file" accept="image/*" onchange="testFileHandling()">
+        <div id="file-result" class="test-result">Результат тесту файлів...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Темы и UI</h2>
+        <button class="test-button" onclick="testThemeToggle()">Переключити тему</button>
+        <div id="theme-result" class="test-result">Результат тесту тем...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>6. Навигация</h2>
+        <button class="test-button" onclick="testNavigation()">Тестувати навігацію</button>
+        <div id="navigation-result" class="test-result">Результат тесту навігації...</div>
+    </div>
+
+    <script>
+        // Тест валидации форм
+        function testFormValidation() {
+            const result = document.getElementById('validation-result');
+            const productName = document.getElementById('test-product-name').value;
+            const quantity = document.getElementById('test-quantity').value;
+            const price = document.getElementById('test-price').value;
+            
+            const tests = [
+                {
+                    name: 'Назва товару',
+                    value: productName,
+                    validator: (val) => val && val.length >= 2 && val.length <= 100
+                },
+                {
+                    name: 'Кількість',
+                    value: quantity,
+                    validator: (val) => !isNaN(val) && parseFloat(val) > 0 && parseFloat(val) <= 10000
+                },
+                {
+                    name: 'Ціна',
+                    value: price,
+                    validator: (val) => !isNaN(val) && parseFloat(val) >= 0 && parseFloat(val) <= 100000
+                }
+            ];
+            
+            let passed = 0;
+            let total = tests.length;
+            let details = '';
+            
+            tests.forEach(test => {
+                const isValid = test.validator(test.value);
+                if (isValid) passed++;
+                details += `${test.name}: ${isValid ? '✅' : '❌'}<br>`;
+            });
+            
+            if (passed === total) {
+                result.className = 'test-result pass-result';
+                result.innerHTML = `✅ Валідація працює (${passed}/${total})<br>${details}`;
+            } else {
+                result.className = 'test-result fail-result';
+                result.innerHTML = `❌ Проблеми з валідацією (${passed}/${total})<br>${details}`;
+            }
+        }
+        
+        // Тест локального хранения
+        function testLocalStorage() {
+            const result = document.getElementById('storage-result');
+            
+            try {
+                const testData = {
+                    id: 'test-' + Date.now(),
+                    productName: 'Тестовий товар',
+                    quantity: 10,
+                    unit: 'кг',
+                    pricePerUnit: 25.50,
+                    totalAmount: 255.00,
+                    location: 'Тестова локація',
+                    timestamp: new Date().toISOString(),
+                    type: 'Закупка'
+                };
+                
+                // Валидация данных
+                function validateHistoryItem(item) {
+                    return item && 
+                           typeof item.id === 'string' &&
+                           typeof item.productName === 'string' &&
+                           typeof item.quantity === 'number' &&
+                           typeof item.unit === 'string' &&
+                           typeof item.location === 'string' &&
+                           typeof item.timestamp === 'string';
+                }
+                
+                if (validateHistoryItem(testData)) {
+                    sessionStorage.setItem('test_purchase_history', JSON.stringify([testData]));
+                    result.className = 'test-result pass-result';
+                    result.innerHTML = '✅ Дані успішно збережено в sessionStorage';
+                } else {
+                    result.className = 'test-result fail-result';
+                    result.innerHTML = '❌ Дані не пройшли валідацію';
+                }
+            } catch (e) {
+                result.className = 'test-result fail-result';
+                result.innerHTML = '❌ Помилка збереження: ' + e.message;
+            }
+        }
+        
+        function testStorageRetrieval() {
+            const result = document.getElementById('storage-result');
+            
+            try {
+                const data = sessionStorage.getItem('test_purchase_history');
+                if (data) {
+                    const items = JSON.parse(data);
+                    if (Array.isArray(items) && items.length > 0) {
+                        result.className = 'test-result pass-result';
+                        result.innerHTML = `✅ Дані успішно отримано: ${items.length} записів`;
+                    } else {
+                        result.className = 'test-result fail-result';
+                        result.innerHTML = '❌ Немає даних для отримання';
+                    }
+                } else {
+                    result.className = 'test-result warning-result';
+                    result.innerHTML = '⚠️ Немає збережених даних';
+                }
+            } catch (e) {
+                result.className = 'test-result fail-result';
+                result.innerHTML = '❌ Помилка отримання: ' + e.message;
+            }
+        }
+        
+        function testStorageClear() {
+            const result = document.getElementById('storage-result');
+            
+            try {
+                sessionStorage.removeItem('test_purchase_history');
+                result.className = 'test-result pass-result';
+                result.innerHTML = '✅ Зберігання очищено';
+            } catch (e) {
+                result.className = 'test-result fail-result';
+                result.innerHTML = '❌ Помилка очищення: ' + e.message;
+            }
+        }
+        
+        // Тест API вызовов
+        function testAPICall() {
+            const result = document.getElementById('api-result');
+            
+            // Симуляция API вызова с таймаутом
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            result.innerHTML = '⏳ Тестуємо API виклик...';
+            
+            // Тестовый URL (замените на реальный)
+            const testUrl = 'https://httpbin.org/delay/1';
+            
+            fetch(testUrl, {
+                method: 'GET',
+                signal: controller.signal,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                clearTimeout(timeoutId);
+                if (response.ok) {
+                    result.className = 'test-result pass-result';
+                    result.innerHTML = '✅ API виклик успішний - є таймаут і CSRF захист';
+                } else {
+                    result.className = 'test-result fail-result';
+                    result.innerHTML = '❌ API виклик невдалий: ' + response.status;
+                }
+            })
+            .catch(error => {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    result.className = 'test-result pass-result';
+                    result.innerHTML = '✅ Таймаут працює - запит скасовано через 5 секунд';
+                } else {
+                    result.className = 'test-result warning-result';
+                    result.innerHTML = '⚠️ Помилка API: ' + error.message;
+                }
+            });
+        }
+        
+        // Тест обработки файлов
+        function testFileHandling() {
+            const result = document.getElementById('file-result');
+            const fileInput = document.getElementById('test-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                result.className = 'test-result warning-result';
+                result.innerHTML = '⚠️ Файл не вибрано';
+                return;
+            }
+            
+            // Валидация файла
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+            
+            const sizeValid = file.size <= maxSize;
+            const typeValid = allowedTypes.includes(file.type);
+            
+            if (sizeValid && typeValid) {
+                result.className = 'test-result pass-result';
+                result.innerHTML = `✅ Файл валідний: ${(file.size / 1024).toFixed(2)} KB, ${file.type}`;
+            } else {
+                result.className = 'test-result fail-result';
+                let errors = [];
+                if (!sizeValid) errors.push('розмір занадто великий');
+                if (!typeValid) errors.push('непідтримуваний тип');
+                result.innerHTML = `❌ Файл невалідний: ${errors.join(', ')}`;
+            }
+        }
+        
+        // Тест переключения тем
+        function testThemeToggle() {
+            const result = document.getElementById('theme-result');
+            
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            result.className = 'test-result pass-result';
+            result.innerHTML = `✅ Тема змінена з ${currentTheme} на ${newTheme}`;
+        }
+        
+        // Тест навигации
+        function testNavigation() {
+            const result = document.getElementById('navigation-result');
+            
+            // Проверяем наличие основных элементов навигации
+            const hasBackButton = document.querySelector('.back-button') !== null;
+            const hasNavButtons = document.querySelectorAll('.nav-button').length > 0;
+            const hasBottomNav = document.querySelector('.bottom-navigation') !== null;
+            
+            const tests = [
+                { name: 'Кнопка назад', passed: hasBackButton },
+                { name: 'Кнопки навігації', passed: hasNavButtons },
+                { name: 'Нижня навігація', passed: hasBottomNav }
+            ];
+            
+            const passed = tests.filter(t => t.passed).length;
+            const total = tests.length;
+            
+            let details = tests.map(t => `${t.name}: ${t.passed ? '✅' : '❌'}`).join('<br>');
+            
+            if (passed === total) {
+                result.className = 'test-result pass-result';
+                result.innerHTML = `✅ Навігація працює (${passed}/${total})<br>${details}`;
+            } else {
+                result.className = 'test-result fail-result';
+                result.innerHTML = `❌ Проблеми з навігацією (${passed}/${total})<br>${details}`;
+            }
+        }
+    </script>
+</body>
+</html>

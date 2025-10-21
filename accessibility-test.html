@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Тест доступности</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 3px; }
+        .pass-result { background-color: #d4edda; }
+        .fail-result { background-color: #f8d7da; }
+        .warning-result { background-color: #fff3cd; }
+        .keyboard-test { margin: 10px 0; padding: 10px; border: 2px dashed #ccc; }
+        .focus-visible { outline: 2px solid #007bff !important; }
+    </style>
+</head>
+<body>
+    <h1>♿ Тестирование доступности</h1>
+    
+    <div class="test-section">
+        <h2>1. Семантический HTML</h2>
+        <div id="semantic-test" class="test-result">Проверяем семантику...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. ARIA атрибуты</h2>
+        <div id="aria-test" class="test-result">Проверяем ARIA...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Навигация с клавиатуры</h2>
+        <div class="keyboard-test">
+            <p>Используйте Tab для навигации, Enter для активации:</p>
+            <button tabindex="0" onclick="testKeyboard(this)">Кнопка 1</button>
+            <button tabindex="0" onclick="testKeyboard(this)">Кнопка 2</button>
+            <input type="text" placeholder="Поле ввода" tabindex="0">
+            <select tabindex="0">
+                <option>Опция 1</option>
+                <option>Опция 2</option>
+            </select>
+        </div>
+        <div id="keyboard-test" class="test-result">Результат теста клавиатуры...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Контрастность цветов</h2>
+        <div id="contrast-test" class="test-result">Проверяем контрастность...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Поддержка уменьшенного движения</h2>
+        <div id="motion-test" class="test-result">Проверяем поддержку reduced motion...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>6. Чтение с экрана</h2>
+        <div id="screen-reader-test" class="test-result">Проверяем совместимость с screen readers...</div>
+    </div>
+
+    <script>
+        // Тест семантического HTML
+        function testSemanticHTML() {
+            const result = document.getElementById('semantic-test');
+            
+            const semanticElements = [
+                'header', 'nav', 'main', 'section', 'article', 'aside', 'footer',
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'li',
+                'button', 'form', 'input', 'label', 'select', 'textarea'
+            ];
+            
+            let found = 0;
+            let total = semanticElements.length;
+            let details = '';
+            
+            semanticElements.forEach(tag => {
+                const elements = document.getElementsByTagName(tag);
+                if (elements.length > 0) {
+                    found++;
+                    details += `${tag}: ${elements.length}<br>`;
+                }
+            });
+            
+            if (found >= total * 0.7) {
+                result.className = 'test-result pass-result';
+                result.innerHTML = `✅ Хорошая семантика (${found}/${total} элементов)<br>${details}`;
+            } else {
+                result.className = 'test-result warning-result';
+                result.innerHTML = `⚠️ Семантика может быть улучшена (${found}/${total} элементов)<br>${details}`;
+            }
+        }
+        
+        // Тест ARIA атрибутов
+        function testARIA() {
+            const result = document.getElementById('aria-test');
+            
+            const ariaAttributes = [
+                'aria-label', 'aria-labelledby', 'aria-describedby',
+                'aria-expanded', 'aria-hidden', 'aria-disabled',
+                'role', 'aria-live', 'aria-atomic'
+            ];
+            
+            let found = 0;
+            let total = ariaAttributes.length;
+            let details = '';
+            
+            ariaAttributes.forEach(attr => {
+                const elements = document.querySelectorAll(`[${attr}]`);
+                if (elements.length > 0) {
+                    found++;
+                    details += `${attr}: ${elements.length}<br>`;
+                }
+            });
+            
+            if (found >= total * 0.5) {
+                result.className = 'test-result pass-result';
+                result.innerHTML = `✅ ARIA атрибуты присутствуют (${found}/${total})<br>${details}`;
+            } else {
+                result.className = 'test-result warning-result';
+                result.innerHTML = `⚠️ ARIA атрибуты могут быть добавлены (${found}/${total})<br>${details}`;
+            }
+        }
+        
+        // Тест навигации с клавиатуры
+        let keyboardTestResults = [];
+        
+        function testKeyboard(element) {
+            keyboardTestResults.push({
+                element: element.tagName,
+                text: element.textContent || element.placeholder || 'элемент',
+                timestamp: new Date().toISOString()
+            });
+            
+            element.style.backgroundColor = '#90EE90';
+            setTimeout(() => {
+                element.style.backgroundColor = '';
+            }, 1000);
+            
+            updateKeyboardTestResult();
+        }
+        
+        function updateKeyboardTestResult() {
+            const result = document.getElementById('keyboard-test');
+            
+            if (keyboardTestResults.length > 0) {
+                result.className = 'test-result pass-result';
+                result.innerHTML = `✅ Клавиатурная навигация работает (${keyboardTestResults.length} элементов протестировано)`;
+            } else {
+                result.className = 'test-result warning-result';
+                result.innerHTML = '⚠️ Протестируйте навигацию с клавиатуры';
+            }
+        }
+        
+        // Тест контрастности
+        function testContrast() {
+            const result = document.getElementById('contrast-test');
+            
+            // Простая проверка контрастности
+            const testColors = [
+                { bg: '#ffffff', fg: '#000000', ratio: 21 }, // Черный на белом
+                { bg: '#4f46e5', fg: '#ffffff', ratio: 8.5 }, // Белый на синем
+                { bg: '#f9fafb', fg: '#111827', ratio: 16.5 } // Темно-серый на светло-сером
+            ];
+            
+            let goodContrast = 0;
+            let total = testColors.length;
+            let details = '';
+            
+            testColors.forEach(color => {
+                const ratio = color.ratio;
+                const isGood = ratio >= 4.5; // WCAG AA стандарт
+                if (isGood) goodContrast++;
+                details += `Соотношение ${ratio}:1 ${isGood ? '✅' : '❌'}<br>`;
+            });
+            
+            if (goodContrast === total) {
+                result.className = 'test-result pass-result';
+                result.innerHTML = `✅ Отличная контрастность (${goodContrast}/${total})<br>${details}`;
+            } else if (goodContrast >= total * 0.7) {
+                result.className = 'test-result warning-result';
+                result.innerHTML = `⚠️ Хорошая контрастность (${goodContrast}/${total})<br>${details}`;
+            } else {
+                result.className = 'test-result fail-result';
+                result.innerHTML = `❌ Плохая контрастность (${goodContrast}/${total})<br>${details}`;
+            }
+        }
+        
+        // Тест поддержки уменьшенного движения
+        function testReducedMotion() {
+            const result = document.getElementById('motion-test');
+            
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            
+            // Проверяем наличие CSS правил для reduced motion
+            const hasReducedMotionCSS = document.querySelector('style') && 
+                document.querySelector('style').textContent.includes('prefers-reduced-motion');
+            
+            if (hasReducedMotionCSS) {
+                result.className = 'test-result pass-result';
+                result.innerHTML = `✅ Поддержка reduced motion настроена (пользователь предпочитает: ${prefersReducedMotion ? 'уменьшенное движение' : 'обычное движение'})`;
+            } else {
+                result.className = 'test-result warning-result';
+                result.innerHTML = '⚠️ Поддержка reduced motion не настроена';
+            }
+        }
+        
+        // Тест совместимости с screen readers
+        function testScreenReader() {
+            const result = document.getElementById('screen-reader-test');
+            
+            const tests = [
+                { name: 'Alt атрибуты для изображений', check: () => document.querySelectorAll('img[alt]').length > 0 },
+                { name: 'Labels для форм', check: () => document.querySelectorAll('label[for]').length > 0 },
+                { name: 'Заголовки структурированы', check: () => {
+                    const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+                    return headings.length > 0;
+                }},
+                { name: 'Focusable элементы', check: () => {
+                    const focusable = document.querySelectorAll('button, input, select, textarea, a[href]');
+                    return focusable.length > 0;
+                }},
+                { name: 'Skip links', check: () => document.querySelector('a[href="#main"], a[href="#content"]') !== null }
+            ];
+            
+            let passed = 0;
+            let total = tests.length;
+            let details = '';
+            
+            tests.forEach(test => {
+                const passedTest = test.check();
+                if (passedTest) passed++;
+                details += `${test.name}: ${passedTest ? '✅' : '❌'}<br>`;
+            });
+            
+            if (passed >= total * 0.8) {
+                result.className = 'test-result pass-result';
+                result.innerHTML = `✅ Хорошая совместимость с screen readers (${passed}/${total})<br>${details}`;
+            } else if (passed >= total * 0.6) {
+                result.className = 'test-result warning-result';
+                result.innerHTML = `⚠️ Удовлетворительная совместимость (${passed}/${total})<br>${details}`;
+            } else {
+                result.className = 'test-result fail-result';
+                result.innerHTML = `❌ Плохая совместимость с screen readers (${passed}/${total})<br>${details}`;
+            }
+        }
+        
+        // Запуск всех тестов
+        function runAllTests() {
+            testSemanticHTML();
+            testARIA();
+            testContrast();
+            testReducedMotion();
+            testScreenReader();
+            updateKeyboardTestResult();
+        }
+        
+        // Запуск тестов при загрузке
+        document.addEventListener('DOMContentLoaded', runAllTests);
+        
+        // Обработка клавиатурных событий
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                document.body.classList.add('keyboard-navigation');
+            }
+        });
+        
+        document.addEventListener('mousedown', () => {
+            document.body.classList.remove('keyboard-navigation');
+        });
+    </script>
+</body>
+</html>

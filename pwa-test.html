@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Тест PWA</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 3px; }
+        .pass-result { background-color: #d4edda; }
+        .fail-result { background-color: #f8d7da; }
+        .warning-result { background-color: #fff3cd; }
+        .install-button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 3px; cursor: pointer; margin: 5px; }
+        .install-button:hover { background: #0056b3; }
+        .install-button:disabled { background: #6c757d; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <h1>📱 Тестирование PWA функций</h1>
+    
+    <div class="test-section">
+        <h2>1. Web App Manifest</h2>
+        <div id="manifest-test" class="test-result">Проверяем манифест...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Service Worker</h2>
+        <div id="sw-test" class="test-result">Проверяем Service Worker...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Установка приложения</h2>
+        <button class="install-button" id="install-button" onclick="installPWA()" disabled>Установить приложение</button>
+        <div id="install-test" class="test-result">Результат установки...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Офлайн функциональность</h2>
+        <button class="install-button" onclick="testOffline()">Тестировать офлайн</button>
+        <div id="offline-test" class="test-result">Результат офлайн теста...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Кеширование</h2>
+        <button class="install-button" onclick="testCaching()">Тестировать кеширование</button>
+        <div id="cache-test" class="test-result">Результат кеширования...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>6. Push уведомления</h2>
+        <button class="install-button" onclick="testNotifications()">Тестировать уведомления</button>
+        <div id="notification-test" class="test-result">Результат уведомлений...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>7. Адаптивность</h2>
+        <div id="responsive-test" class="test-result">Проверяем адаптивность...</div>
+    </div>
+
+    <script>
+        let deferredPrompt;
+        let swRegistration;
+        
+        // Тест Web App Manifest
+        function testManifest() {
+            const result = document.getElementById('manifest-test');
+            
+            const manifestLink = document.querySelector('link[rel="manifest"]');
+            if (manifestLink) {
+                fetch(manifestLink.href)
+                    .then(response => response.json())
+                    .then(manifest => {
+                        const requiredFields = ['name', 'short_name', 'start_url', 'display', 'icons'];
+                        const hasRequired = requiredFields.every(field => manifest[field]);
+                        
+                        if (hasRequired) {
+                            result.className = 'test-result pass-result';
+                            result.innerHTML = `✅ Манифест корректен<br>
+                                Название: ${manifest.name}<br>
+                                Короткое название: ${manifest.short_name}<br>
+                                Иконки: ${manifest.icons.length}<br>
+                                Режим отображения: ${manifest.display}`;
+                        } else {
+                            result.className = 'test-result fail-result';
+                            result.innerHTML = '❌ Манифест неполный - отсутствуют обязательные поля';
+                        }
+                    })
+                    .catch(error => {
+                        result.className = 'test-result fail-result';
+                        result.innerHTML = '❌ Ошибка загрузки манифеста: ' + error.message;
+                    });
+            } else {
+                result.className = 'test-result fail-result';
+                result.innerHTML = '❌ Манифест не найден';
+            }
+        }
+        
+        // Тест Service Worker
+        function testServiceWorker() {
+            const result = document.getElementById('sw-test');
+            
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations()
+                    .then(registrations => {
+                        if (registrations.length > 0) {
+                            swRegistration = registrations[0];
+                            result.className = 'test-result pass-result';
+                            result.innerHTML = `✅ Service Worker активен<br>
+                                Состояние: ${swRegistration.active ? swRegistration.active.state : 'неактивен'}<br>
+                                Scope: ${swRegistration.scope}`;
+                        } else {
+                            result.className = 'test-result warning-result';
+                            result.innerHTML = '⚠️ Service Worker не зарегистрирован';
+                        }
+                    })
+                    .catch(error => {
+                        result.className = 'test-result fail-result';
+                        result.innerHTML = '❌ Ошибка Service Worker: ' + error.message;
+                    });
+            } else {
+                result.className = 'test-result fail-result';
+                result.innerHTML = '❌ Service Worker не поддерживается браузером';
+            }
+        }
+        
+        // Установка PWA
+        function installPWA() {
+            const result = document.getElementById('install-test');
+            
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        result.className = 'test-result pass-result';
+                        result.innerHTML = '✅ Приложение установлено';
+                    } else {
+                        result.className = 'test-result warning-result';
+                        result.innerHTML = '⚠️ Установка отменена пользователем';
+                    }
+                    deferredPrompt = null;
+                });
+            } else {
+                result.className = 'test-result warning-result';
+                result.innerHTML = '⚠️ Приложение уже установлено или установка недоступна';
+            }
+        }
+        
+        // Тест офлайн функциональности
+        function testOffline() {
+            const result = document.getElementById('offline-test');
+            
+            // Симуляция офлайн режима
+            const originalOnline = navigator.onLine;
+            Object.defineProperty(navigator, 'onLine', {
+                writable: true,
+                value: false
+            });
+            
+            // Тестируем доступность кешированных ресурсов
+            const testUrls = ['/', '/styles.css', '/app.js'];
+            let cachedCount = 0;
+            let totalCount = testUrls.length;
+            
+            Promise.all(testUrls.map(url => 
+                fetch(url).then(response => {
+                    if (response.ok) cachedCount++;
+                }).catch(() => {})
+            )).then(() => {
+                // Восстанавливаем онлайн статус
+                Object.defineProperty(navigator, 'onLine', {
+                    writable: true,
+                    value: originalOnline
+                });
+                
+                if (cachedCount === totalCount) {
+                    result.className = 'test-result pass-result';
+                    result.innerHTML = `✅ Офлайн функциональность работает (${cachedCount}/${totalCount} ресурсов доступны)`;
+                } else if (cachedCount > 0) {
+                    result.className = 'test-result warning-result';
+                    result.innerHTML = `⚠️ Частичная офлайн функциональность (${cachedCount}/${totalCount} ресурсов доступны)`;
+                } else {
+                    result.className = 'test-result fail-result';
+                    result.innerHTML = '❌ Офлайн функциональность не работает';
+                }
+            });
+        }
+        
+        // Тест кеширования
+        function testCaching() {
+            const result = document.getElementById('cache-test');
+            
+            if ('caches' in window) {
+                caches.keys().then(cacheNames => {
+                    if (cacheNames.length > 0) {
+                        result.className = 'test-result pass-result';
+                        result.innerHTML = `✅ Кеширование активно<br>
+                            Кешей: ${cacheNames.length}<br>
+                            Названия: ${cacheNames.join(', ')}`;
+                    } else {
+                        result.className = 'test-result warning-result';
+                        result.innerHTML = '⚠️ Кеши не найдены';
+                    }
+                }).catch(error => {
+                    result.className = 'test-result fail-result';
+                    result.innerHTML = '❌ Ошибка проверки кешей: ' + error.message;
+                });
+            } else {
+                result.className = 'test-result fail-result';
+                result.innerHTML = '❌ Cache API не поддерживается';
+            }
+        }
+        
+        // Тест уведомлений
+        function testNotifications() {
+            const result = document.getElementById('notification-test');
+            
+            if ('Notification' in window) {
+                if (Notification.permission === 'granted') {
+                    new Notification('Тест PWA', {
+                        body: 'Уведомления работают!',
+                        icon: '/icon-192.png'
+                    });
+                    result.className = 'test-result pass-result';
+                    result.innerHTML = '✅ Уведомления разрешены и работают';
+                } else if (Notification.permission === 'default') {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            result.className = 'test-result pass-result';
+                            result.innerHTML = '✅ Разрешение на уведомления получено';
+                        } else {
+                            result.className = 'test-result warning-result';
+                            result.innerHTML = '⚠️ Разрешение на уведомления отклонено';
+                        }
+                    });
+                } else {
+                    result.className = 'test-result warning-result';
+                    result.innerHTML = '⚠️ Уведомления заблокированы';
+                }
+            } else {
+                result.className = 'test-result fail-result';
+                result.innerHTML = '❌ Уведомления не поддерживаются';
+            }
+        }
+        
+        // Тест адаптивности
+        function testResponsive() {
+            const result = document.getElementById('responsive-test');
+            
+            const viewport = document.querySelector('meta[name="viewport"]');
+            const hasViewport = viewport && viewport.content.includes('width=device-width');
+            
+            const mediaQueries = [
+                '@media (max-width: 768px)',
+                '@media (max-width: 480px)',
+                '@media (min-width: 1024px)'
+            ];
+            
+            let responsiveCSS = false;
+            const styleSheets = Array.from(document.styleSheets);
+            styleSheets.forEach(sheet => {
+                try {
+                    const rules = Array.from(sheet.cssRules || sheet.rules);
+                    rules.forEach(rule => {
+                        if (rule.type === CSSRule.MEDIA_RULE) {
+                            mediaQueries.forEach(mq => {
+                                if (rule.media.mediaText.includes(mq)) {
+                                    responsiveCSS = true;
+                                }
+                            });
+                        }
+                    });
+                } catch (e) {
+                    // Игнорируем ошибки CORS
+                }
+            });
+            
+            const tests = [
+                { name: 'Viewport meta tag', passed: hasViewport },
+                { name: 'Responsive CSS', passed: responsiveCSS },
+                { name: 'Flexible layout', passed: document.querySelector('.main-content') !== null }
+            ];
+            
+            const passed = tests.filter(t => t.passed).length;
+            const total = tests.length;
+            
+            let details = tests.map(t => `${t.name}: ${t.passed ? '✅' : '❌'}`).join('<br>');
+            
+            if (passed === total) {
+                result.className = 'test-result pass-result';
+                result.innerHTML = `✅ Отличная адаптивность (${passed}/${total})<br>${details}`;
+            } else if (passed >= total * 0.7) {
+                result.className = 'test-result warning-result';
+                result.innerHTML = `⚠️ Хорошая адаптивность (${passed}/${total})<br>${details}`;
+            } else {
+                result.className = 'test-result fail-result';
+                result.innerHTML = `❌ Плохая адаптивность (${passed}/${total})<br>${details}`;
+            }
+        }
+        
+        // Обработка события beforeinstallprompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('install-button').disabled = false;
+        });
+        
+        // Обработка события appinstalled
+        window.addEventListener('appinstalled', () => {
+            const result = document.getElementById('install-test');
+            result.className = 'test-result pass-result';
+            result.innerHTML = '✅ Приложение успешно установлено';
+        });
+        
+        // Запуск всех тестов
+        function runAllTests() {
+            testManifest();
+            testServiceWorker();
+            testResponsive();
+        }
+        
+        // Запуск тестов при загрузке
+        document.addEventListener('DOMContentLoaded', runAllTests);
+    </script>
+</body>
+</html>

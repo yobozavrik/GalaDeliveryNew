@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Облік закупівель</title>
+
+    <!-- CSP для безпеки -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' https://unpkg.com https://cdn.jsdelivr.net;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data: blob:;
+        connect-src 'self' https://n8n.dmytrotovstytskyi.online https://generativelanguage.googleapis.com https://unpkg.com https://cdn.jsdelivr.net;
+    ">
+
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-content">
+            <button class="back-button" id="backButton" style="display: none;" type="button" aria-label="Назад">
+                <i data-lucide="arrow-left"></i>
+            </button>
+            <h1 class="header-title" id="headerTitle">Облік закупівель</h1>
+            <div class="header-actions">
+                <button class="mode-toggle" id="modeToggle" type="button" aria-pressed="false">
+                    <span class="mode-indicator"></span>
+                    <span id="modeToggleLabel">Робочий режим</span>
+                </button>
+                <button class="theme-toggle" id="themeToggle" type="button" aria-label="Перемкнути тему">
+                    <i data-lucide="moon" class="theme-icon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="loading-screen" id="loadingScreen">
+            <div class="loading-spinner"></div>
+            <p>Завантаження...</p>
+        </div>
+
+        <div class="screen" id="mainScreen" style="display: none;">
+            <!-- Головна вкладка (purchases) -->
+            <div class="tab-content" id="purchasesTab" style="display: none;">
+                <div class="purchases-page">
+                    <div class="page-header">
+                        <h2>Оберіть дію</h2>
+                        <p>Виберіть тип операції для обліку</p>
+                    </div>
+
+                    <div class="current-date-widget glassmorphism">
+                        <div class="date-icon">
+                            <i data-lucide="calendar"></i>
+                        </div>
+                        <div class="date-content">
+                            <div class="date-day" id="currentDay">Завантаження...</div>
+                            <div class="date-full" id="currentDate">Завантаження...</div>
+                        </div>
+                    </div>
+
+                    <div class="categories-grid">
+                        <div class="category-row">
+                            <button class="category-card start-purchase glassmorphism" id="startPurchaseBtn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="category-icon"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                                <span class="category-label">Почати закупку</span>
+                            </button>
+                        </div>
+                        <div class="category-row">
+                            <button class="category-card unloading glassmorphism" id="startUnloadingBtn">
+                                <i data-lucide="truck" class="category-icon"></i>
+                                <span class="category-label">Відвантаження</span>
+                            </button>
+                            <button class="category-card delivery glassmorphism" id="startDeliveryBtn">
+                                <i data-lucide="package" class="category-icon"></i>
+                                <span class="category-label">Доставка</span>
+                            </button>
+                        </div>
+                        <div class="end-day-section">
+                            <button class="end-day-button" id="endDayBtn">
+                                <i data-lucide="sunset"></i>
+                                <span>Завершити день</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вкладка історії -->
+            <div class="tab-content" id="historyTab" style="display: none;">
+                <div class="page-header">
+                    <h2>Історія операцій</h2>
+                    <p id="historySummary">Завантаження...</p>
+                </div>
+                <div class="history-page">
+                    <div class="history-items" id="historyItems"></div>
+                    <div class="cart-empty" id="historyEmpty" style="display: none;">
+                        <div class="empty-icon">📦</div>
+                        <p>Тут буде історія ваших операцій</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Екран списку чернеток відвантаження -->
+        <div class="screen" id="draftsListScreen" style="display: none;">
+            <div class="purchases-page">
+                <div class="page-header">
+                    <h2>Чернетки відвантаження</h2>
+                    <p id="draftsListSummary">Завантаження...</p>
+                </div>
+
+                <div class="drafts-list" id="draftsList">
+                    <!-- Чернетки будуть додані динамічно -->
+                </div>
+
+                <div class="cart-empty" id="draftsEmpty" style="display: none;">
+                    <div class="empty-icon">📋</div>
+                    <p>Немає чернеток. Створіть нову заявку!</p>
+                </div>
+
+                <div class="fixed-bottom-button">
+                    <button class="btn-primary new-draft-button" id="newDraftBtn" type="button">
+                        <i data-lucide="plus"></i>
+                        <span>Нова заявка</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Екран вибору магазину для відвантаження -->
+        <div class="screen" id="storeSelectionScreen" style="display: none;">
+            <div class="purchases-page">
+                <div class="page-header">
+                    <h2>Оберіть магазин</h2>
+                    <p>Виберіть магазин для відвантаження</p>
+                </div>
+
+                <div class="stores-grid" id="storesGrid">
+                    <!-- Магазини будуть додані динамічно -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Екран перегляду чернетки (список товарів) -->
+        <div class="screen" id="draftViewScreen" style="display: none;">
+            <div class="purchases-page">
+                <div class="page-header">
+                    <h2 id="draftViewTitle">Чернетка</h2>
+                    <p id="draftViewSummary">0 товарів</p>
+                </div>
+
+                <div class="draft-items" id="draftItems">
+                    <!-- Товари будуть додані динамічно -->
+                </div>
+
+                <div class="cart-empty" id="draftItemsEmpty" style="display: none;">
+                    <div class="empty-icon">📦</div>
+                    <p>Немає товарів. Додайте перший товар!</p>
+                </div>
+
+                <div class="draft-actions">
+                    <button class="btn-secondary add-item-button" id="addItemToDraftBtn" type="button">
+                        <i data-lucide="plus"></i>
+                        <span>Додати товар</span>
+                    </button>
+                    <button class="btn-primary submit-draft-button" id="submitDraftBtn" type="button">
+                        <i data-lucide="send"></i>
+                        <span id="submitDraftBtnText">Відправити всі</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Екран списку чернеток закупок -->
+        <div class="screen" id="purchaseDraftsListScreen" style="display: none;">
+            <div class="purchases-page">
+                <div class="page-header">
+                    <h2>Чернетки закупок</h2>
+                    <p id="purchaseDraftsListSummary">Завантаження...</p>
+                </div>
+
+                <div class="drafts-list" id="purchaseDraftsList">
+                    <!-- Чернетки будуть додані динамічно -->
+                </div>
+
+                <div class="cart-empty" id="purchaseDraftsEmpty" style="display: none;">
+                    <div class="empty-icon">📋</div>
+                    <p>Немає чернеток. Створіть нову закупку!</p>
+                </div>
+
+                <div class="fixed-bottom-button">
+                    <button class="btn-primary new-draft-button" id="newPurchaseDraftBtn" type="button">
+                        <i data-lucide="plus"></i>
+                        <span>Нова закупка</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Екран вибору локації для закупки -->
+        <div class="screen" id="purchaseLocationSelectionScreen" style="display: none;">
+            <div class="purchases-page">
+                <div class="page-header">
+                    <h2>Оберіть локацію</h2>
+                    <p>Виберіть локацію для закупки</p>
+                </div>
+
+                <div class="stores-grid" id="purchaseLocationsGrid">
+                    <!-- Локації будуть додані динамічно -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Екран перегляду чернетки закупки -->
+        <div class="screen" id="purchaseDraftViewScreen" style="display: none;">
+            <div class="purchases-page">
+                <div class="page-header">
+                    <h2 id="purchaseDraftViewTitle">Чернетка закупки</h2>
+                    <p id="purchaseDraftViewSummary">0 товарів</p>
+                </div>
+
+                <div class="draft-items" id="purchaseDraftItems">
+                    <!-- Товари будуть додані динамічно -->
+                </div>
+
+                <div class="cart-empty" id="purchaseDraftItemsEmpty" style="display: none;">
+                    <div class="empty-icon">📦</div>
+                    <p>Немає товарів. Додайте перший товар!</p>
+                </div>
+
+                <div class="draft-actions">
+                    <button class="btn-secondary add-item-button" id="addItemToPurchaseDraftBtn" type="button">
+                        <i data-lucide="plus"></i>
+                        <span>Додати товар</span>
+                    </button>
+                    <button class="btn-primary submit-draft-button" id="submitPurchaseDraftBtn" type="button">
+                        <i data-lucide="send"></i>
+                        <span id="submitPurchaseDraftBtnText">Відправити всі</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="screen" id="purchaseFormScreen" style="display: none;">
+            <div class="purchase-form-page">
+                <div class="page-header">
+                    <h2 id="formTitle">Нова закупівля</h2>
+                    <p id="formSubtitle">Вкажіть дані про товар</p>
+                </div>
+                <div class="form-container glassmorphism">
+                    <form class="purchase-form" id="purchaseForm" novalidate>
+                        <div class="form-group">
+                            <label for="productName">Назва товару *</label>
+                            <input type="text" id="productName" list="productSuggestions" placeholder="Наприклад: Помідори червоні" required autocomplete="off">
+                            <datalist id="productSuggestions"></datalist>
+                            <span class="field-error" id="productName-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quantity">Кількість *</label>
+                            <input type="number" id="quantity" step="0.1" min="0" placeholder="0" required>
+                            <span class="field-error" id="quantity-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="unit">Одиниця виміру *</label>
+                            <select id="unit" required></select>
+                            <span class="field-error" id="unit-error"></span>
+                        </div>
+
+                        <div class="form-group" id="priceGroup">
+                            <label for="pricePerUnit">Ціна за одиницю, ₴</label>
+                            <input type="number" id="pricePerUnit" step="0.01" min="0" placeholder="0.00">
+                            <span class="field-error" id="pricePerUnit-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="location" id="locationLabel">Локація *</label>
+                            <select id="location" required></select>
+                            <span class="field-error" id="location-error"></span>
+                        </div>
+
+                        <div class="form-group" id="customLocationGroup" style="display: none;">
+                            <label for="customLocation">Вкажіть локацію *</label>
+                            <input type="text" id="customLocation" placeholder="Введіть назву локації">
+                            <span class="field-error" id="customLocation-error"></span>
+                        </div>
+
+                        <!-- Джерело товару для складських продуктів -->
+                        <div class="form-group" id="sourceGroup" style="display: none;">
+                            <label>Джерело товару *</label>
+                            <div id="sourceOptions" class="source-options">
+                                <!-- Radio buttons будуть додані динамічно -->
+                            </div>
+                            <span class="field-error" id="source-error"></span>
+                            <div id="stockInfo" class="stock-info" style="display: none;"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Фото товару</label>
+                            <div class="photo-uploader">
+                                <input type="file" id="photoInput" accept="image/*,.heic,.heif" style="display: none;">
+                                <button type="button" class="photo-button" id="photoButton">
+                                    <i data-lucide="camera"></i>
+                                    <span>Додати фото</span>
+                                </button>
+                                <div class="photo-preview" id="photoPreview" style="display: none;">
+                                    <img id="previewImage" alt="Попередній перегляд">
+                                    <div id="photoPreviewFallback" class="photo-preview-fallback" style="display: none;">
+                                        Попередній перегляд недоступний для цього формату, але файл буде відправлено.
+                                    </div>
+                                    <button type="button" class="remove-photo" id="removePhotoBtn">
+                                        <i data-lucide="x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="total-display" id="totalGroup">
+                            <span id="totalAmount">0.00 ₴</span>
+                        </div>
+
+                        <button type="submit" class="save-button" id="saveButton">
+                            <i data-lucide="save" class="button-icon"></i>
+                            <span class="button-spinner" style="display: none;"></span>
+                            <span id="saveButtonText">Відправити в облік</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Екран вибору методу введення для Метро -->
+        <div class="screen" id="metroMethodSelectionScreen" style="display: none;">
+            <div class="purchases-page">
+                <div class="page-header">
+                    <h2>Метро - Оберіть метод</h2>
+                    <p>Як ви хочете додати товари?</p>
+                </div>
+
+                <div class="method-selection-grid">
+                    <button class="method-card scan-method glassmorphism" id="scanReceiptBtn" type="button">
+                        <div class="method-icon">
+                            <i data-lucide="scan"></i>
+                        </div>
+                        <h3>Сканувати чек</h3>
+                        <p>AI розпізнає всі товари з фото чека</p>
+                        <div class="method-badge">Рекомендовано</div>
+                    </button>
+
+                    <button class="method-card manual-method glassmorphism" id="manualEntryBtn" type="button">
+                        <div class="method-icon">
+                            <i data-lucide="edit"></i>
+                        </div>
+                        <h3>Ввести вручну</h3>
+                        <p>Додавайте товари по одному</p>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Екран сканування чека -->
+        <div class="screen" id="receiptScanScreen" style="display: none;">
+            <div class="purchases-page">
+                <div class="page-header">
+                    <h2>Сфотографуйте чек</h2>
+                    <p>Зробіть чітке фото всього чека</p>
+                </div>
+
+                <div class="receipt-scan-container">
+                    <div class="receipt-camera-area">
+                        <input type="file" id="receiptPhotoInput" accept="image/*" capture="environment" style="display: none;">
+                        <button class="receipt-camera-button glassmorphism" id="takePhotoReceiptBtn" type="button">
+                            <i data-lucide="camera" class="camera-icon-large"></i>
+                            <span>Зробити фото чека</span>
+                        </button>
+
+                        <div class="receipt-preview" id="receiptPreview" style="display: none;">
+                            <img id="receiptPreviewImage" alt="Фото чека">
+                            <button class="retake-photo-btn" id="retakePhotoBtn" type="button">
+                                <i data-lucide="refresh-cw"></i>
+                                <span>Перефотографувати</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="scanning-status" id="scanningStatus" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <h3>AI розпізнає чек...</h3>
+                        <p>Це може зайняти до 10 секунд</p>
+                    </div>
+
+                    <div class="receipt-tips glassmorphism">
+                        <h4><i data-lucide="info"></i> Поради для кращого розпізнавання:</h4>
+                        <ul>
+                            <li>Розправте чек і покладіть на рівну поверхню</li>
+                            <li>Переконайтесь, що весь чек видно на фото</li>
+                            <li>Уникайте відблисків та тіней</li>
+                            <li>Тримайте камеру рівно над чеком</li>
+                        </ul>
+                    </div>
+
+                    <button class="process-receipt-btn btn-primary" id="processReceiptBtn" type="button" style="display: none;">
+                        <i data-lucide="sparkles"></i>
+                        <span>Розпізнати чек</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Екран перевірки розпізнаних товарів -->
+        <div class="screen" id="recognizedItemsScreen" style="display: none;">
+            <div class="purchases-page">
+                <div class="page-header">
+                    <h2>Перевірте розпізнані товари</h2>
+                    <p id="recognizedItemsSummary">0 товарів розпізнано</p>
+                </div>
+
+                <div class="recognized-items-list" id="recognizedItemsList">
+                    <!-- Товари будуть додані динамічно -->
+                </div>
+
+                <div class="cart-empty" id="recognizedItemsEmpty" style="display: none;">
+                    <div class="empty-icon">⚠️</div>
+                    <p>AI не зміг розпізнати товари з чека</p>
+                    <button class="btn-secondary" id="tryAgainBtn" type="button">
+                        <i data-lucide="refresh-cw"></i>
+                        <span>Спробувати ще раз</span>
+                    </button>
+                </div>
+
+                <div class="recognized-items-actions">
+                    <button class="btn-secondary" id="addManualItemBtn" type="button">
+                        <i data-lucide="plus"></i>
+                        <span>Додати товар</span>
+                    </button>
+                    <button class="btn-primary" id="confirmRecognizedItemsBtn" type="button">
+                        <i data-lucide="check"></i>
+                        <span id="confirmRecognizedItemsBtnText">Підтвердити всі</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <nav class="bottom-navigation" id="bottomNavigation">
+        <button class="nav-button active" data-tab="purchases" id="navPurchases">
+            <i data-lucide="home"></i>
+            <span>Головна</span>
+        </button>
+        <button class="nav-button" data-tab="history" id="navHistory">
+            <i data-lucide="clock"></i>
+            <span>Історія</span>
+        </button>
+    </nav>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Modal для перегляду/редагування товару в чернетці -->
+    <div class="modal-overlay" id="itemViewModal">
+        <div class="modal-content glassmorphism item-view-modal">
+            <div class="modal-header">
+                <h3 id="itemViewTitle">Деталі товару</h3>
+                <button class="modal-close" id="closeItemViewBtn" type="button">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="item-view-content" id="itemViewContent">
+                <div class="item-detail-row">
+                    <span class="item-detail-label">Назва:</span>
+                    <span class="item-detail-value" id="itemDetailName">-</span>
+                </div>
+                <div class="item-detail-row">
+                    <span class="item-detail-label">Кількість:</span>
+                    <span class="item-detail-value" id="itemDetailQuantity">-</span>
+                </div>
+                <div class="item-detail-row">
+                    <span class="item-detail-label">Ціна за одиницю:</span>
+                    <span class="item-detail-value" id="itemDetailPrice">-</span>
+                </div>
+                <div class="item-detail-row">
+                    <span class="item-detail-label">Загальна сума:</span>
+                    <span class="item-detail-value item-detail-total" id="itemDetailTotal">-</span>
+                </div>
+                <div class="item-detail-row">
+                    <span class="item-detail-label">Магазин:</span>
+                    <span class="item-detail-value" id="itemDetailLocation">-</span>
+                </div>
+                <div class="item-detail-row" id="itemDetailSourceRow" style="display: none;">
+                    <span class="item-detail-label">Джерело:</span>
+                    <span class="item-detail-value" id="itemDetailSource">-</span>
+                </div>
+                <div class="item-detail-row">
+                    <span class="item-detail-label">Створено:</span>
+                    <span class="item-detail-value" id="itemDetailTimestamp">-</span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" id="editItemBtn">
+                    <i data-lucide="edit"></i>
+                    <span>Редагувати</span>
+                </button>
+                <button class="btn-destructive" id="deleteItemFromModalBtn">
+                    <i data-lucide="trash-2"></i>
+                    <span>Видалити</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal для завершення дня -->
+    <div class="modal-overlay" id="endDayModal">
+        <div class="modal-content glassmorphism">
+            <h3>Завершити день?</h3>
+            <p>AI згенерує підсумковий звіт на основі всіх операцій за сьогодні.</p>
+            <div class="modal-actions">
+                <button class="btn-secondary" id="cancelEndDayBtn">Скасувати</button>
+                <button class="btn-primary" id="confirmEndDayBtn">Згенерувати звіт</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal для AI звіту -->
+    <div class="modal-overlay" id="aiSummaryModal">
+        <div class="modal-content glassmorphism">
+            <h3>Денний звіт AI</h3>
+            <div id="aiSummaryContent" class="ai-summary-content">
+                <div class="loading-spinner"></div>
+                <p>Генеруємо звіт...</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" id="closeAiSummaryBtn">Закрити</button>
+                <button class="btn-destructive" id="clearHistoryBtn" style="display: none;">Очистити історію</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Скрипти -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js" type="module"></script>
+</body>
+</html>

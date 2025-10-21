@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Тест производительности</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .pass { background-color: #d4edda; border-color: #c3e6cb; }
+        .fail { background-color: #f8d7da; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 3px; }
+        .pass-result { background-color: #d4edda; }
+        .fail-result { background-color: #f8d7da; }
+        .warning-result { background-color: #fff3cd; }
+        .metric { display: inline-block; margin: 5px 10px; padding: 5px 10px; background: #f8f9fa; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>⚡ Тестирование производительности</h1>
+    
+    <div class="test-section">
+        <h2>1. Время загрузки страницы</h2>
+        <div id="load-time-test" class="test-result">Измеряем время загрузки...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Размер ресурсов</h2>
+        <div id="resource-size-test" class="test-result">Анализируем размер файлов...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Кеширование</h2>
+        <div id="cache-test" class="test-result">Проверяем кеширование...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Оптимизация анимаций</h2>
+        <div id="animation-test" class="test-result">Тестируем производительность анимаций...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Memory Usage</h2>
+        <div id="memory-test" class="test-result">Проверяем использование памяти...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>6. PWA Performance</h2>
+        <div id="pwa-test" class="test-result">Тестируем PWA функции...</div>
+    </div>
+
+    <script>
+        // Тест времени загрузки
+        function testLoadTime() {
+            const loadTimeTest = document.getElementById('load-time-test');
+            const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+            
+            if (loadTime < 1000) {
+                loadTimeTest.className = 'test-result pass-result';
+                loadTimeTest.innerHTML = `✅ Отличная скорость загрузки: ${loadTime}ms`;
+            } else if (loadTime < 3000) {
+                loadTimeTest.className = 'test-result warning-result';
+                loadTimeTest.innerHTML = `⚠️ Приемлемая скорость загрузки: ${loadTime}ms`;
+            } else {
+                loadTimeTest.className = 'test-result fail-result';
+                loadTimeTest.innerHTML = `❌ Медленная загрузка: ${loadTime}ms`;
+            }
+        }
+        
+        // Тест размера ресурсов
+        function testResourceSize() {
+            const resourceSizeTest = document.getElementById('resource-size-test');
+            
+            // Получаем информацию о ресурсах
+            const resources = performance.getEntriesByType('resource');
+            let totalSize = 0;
+            let htmlSize = 0;
+            let cssSize = 0;
+            let jsSize = 0;
+            
+            resources.forEach(resource => {
+                if (resource.transferSize) {
+                    totalSize += resource.transferSize;
+                    
+                    if (resource.name.includes('.html')) htmlSize += resource.transferSize;
+                    else if (resource.name.includes('.css')) cssSize += resource.transferSize;
+                    else if (resource.name.includes('.js')) jsSize += resource.transferSize;
+                }
+            });
+            
+            const totalKB = (totalSize / 1024).toFixed(2);
+            const htmlKB = (htmlSize / 1024).toFixed(2);
+            const cssKB = (cssSize / 1024).toFixed(2);
+            const jsKB = (jsSize / 1024).toFixed(2);
+            
+            let result = `<div class="metric">Общий размер: ${totalKB} KB</div>`;
+            result += `<div class="metric">HTML: ${htmlKB} KB</div>`;
+            result += `<div class="metric">CSS: ${cssKB} KB</div>`;
+            result += `<div class="metric">JS: ${jsKB} KB</div>`;
+            
+            if (totalSize < 500000) { // < 500KB
+                resourceSizeTest.className = 'test-result pass-result';
+                resourceSizeTest.innerHTML = '✅ Оптимальный размер ресурсов<br>' + result;
+            } else if (totalSize < 1000000) { // < 1MB
+                resourceSizeTest.className = 'test-result warning-result';
+                resourceSizeTest.innerHTML = '⚠️ Приемлемый размер ресурсов<br>' + result;
+            } else {
+                resourceSizeTest.className = 'test-result fail-result';
+                resourceSizeTest.innerHTML = '❌ Большой размер ресурсов<br>' + result;
+            }
+        }
+        
+        // Тест кеширования
+        function testCaching() {
+            const cacheTest = document.getElementById('cache-test');
+            
+            // Проверяем наличие Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    if (registrations.length > 0) {
+                        cacheTest.className = 'test-result pass-result';
+                        cacheTest.innerHTML = '✅ Service Worker активен - кеширование работает';
+                    } else {
+                        cacheTest.className = 'test-result warning-result';
+                        cacheTest.innerHTML = '⚠️ Service Worker не зарегистрирован';
+                    }
+                });
+            } else {
+                cacheTest.className = 'test-result fail-result';
+                cacheTest.innerHTML = '❌ Service Worker не поддерживается браузером';
+            }
+        }
+        
+        // Тест анимаций
+        function testAnimations() {
+            const animationTest = document.getElementById('animation-test');
+            
+            // Создаем тестовый элемент для анимации
+            const testElement = document.createElement('div');
+            testElement.style.cssText = `
+                position: absolute;
+                width: 50px;
+                height: 50px;
+                background: red;
+                transition: transform 0.3s ease;
+            `;
+            document.body.appendChild(testElement);
+            
+            const startTime = performance.now();
+            
+            // Запускаем анимацию
+            testElement.style.transform = 'translateX(100px)';
+            
+            setTimeout(() => {
+                const endTime = performance.now();
+                const animationTime = endTime - startTime;
+                
+                document.body.removeChild(testElement);
+                
+                if (animationTime < 50) {
+                    animationTest.className = 'test-result pass-result';
+                    animationTest.innerHTML = `✅ Анимации оптимизированы: ${animationTime.toFixed(2)}ms`;
+                } else {
+                    animationTest.className = 'test-result warning-result';
+                    animationTest.innerHTML = `⚠️ Анимации могут быть медленными: ${animationTime.toFixed(2)}ms`;
+                }
+            }, 300);
+        }
+        
+        // Тест использования памяти
+        function testMemoryUsage() {
+            const memoryTest = document.getElementById('memory-test');
+            
+            if (performance.memory) {
+                const memory = performance.memory;
+                const usedMB = (memory.usedJSHeapSize / 1024 / 1024).toFixed(2);
+                const totalMB = (memory.totalJSHeapSize / 1024 / 1024).toFixed(2);
+                const limitMB = (memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2);
+                
+                const usagePercent = (memory.usedJSHeapSize / memory.jsHeapSizeLimit * 100).toFixed(1);
+                
+                let result = `<div class="metric">Использовано: ${usedMB} MB</div>`;
+                result += `<div class="metric">Всего: ${totalMB} MB</div>`;
+                result += `<div class="metric">Лимит: ${limitMB} MB</div>`;
+                result += `<div class="metric">Использование: ${usagePercent}%</div>`;
+                
+                if (usagePercent < 50) {
+                    memoryTest.className = 'test-result pass-result';
+                    memoryTest.innerHTML = '✅ Оптимальное использование памяти<br>' + result;
+                } else if (usagePercent < 80) {
+                    memoryTest.className = 'test-result warning-result';
+                    memoryTest.innerHTML = '⚠️ Приемлемое использование памяти<br>' + result;
+                } else {
+                    memoryTest.className = 'test-result fail-result';
+                    memoryTest.innerHTML = '❌ Высокое использование памяти<br>' + result;
+                }
+            } else {
+                memoryTest.className = 'test-result warning-result';
+                memoryTest.innerHTML = '⚠️ Информация о памяти недоступна в этом браузере';
+            }
+        }
+        
+        // Тест PWA
+        function testPWA() {
+            const pwaTest = document.getElementById('pwa-test');
+            
+            const tests = {
+                manifest: !!document.querySelector('link[rel="manifest"]'),
+                serviceWorker: 'serviceWorker' in navigator,
+                https: location.protocol === 'https:' || location.hostname === 'localhost',
+                responsive: window.innerWidth > 0
+            };
+            
+            const passedTests = Object.values(tests).filter(Boolean).length;
+            const totalTests = Object.keys(tests).length;
+            
+            let result = '';
+            Object.entries(tests).forEach(([test, passed]) => {
+                result += `<div class="metric">${test}: ${passed ? '✅' : '❌'}</div>`;
+            });
+            
+            if (passedTests === totalTests) {
+                pwaTest.className = 'test-result pass-result';
+                pwaTest.innerHTML = `✅ PWA полностью готово (${passedTests}/${totalTests})<br>` + result;
+            } else if (passedTests >= totalTests * 0.75) {
+                pwaTest.className = 'test-result warning-result';
+                pwaTest.innerHTML = `⚠️ PWA частично готово (${passedTests}/${totalTests})<br>` + result;
+            } else {
+                pwaTest.className = 'test-result fail-result';
+                pwaTest.innerHTML = `❌ PWA не готово (${passedTests}/${totalTests})<br>` + result;
+            }
+        }
+        
+        // Запуск всех тестов
+        function runAllTests() {
+            testLoadTime();
+            testResourceSize();
+            testCaching();
+            testAnimations();
+            testMemoryUsage();
+            testPWA();
+        }
+        
+        // Запуск тестов после загрузки
+        window.addEventListener('load', () => {
+            setTimeout(runAllTests, 1000); // Даем время на загрузку всех ресурсов
+        });
+    </script>
+</body>
+</html>

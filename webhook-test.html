@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест Webhook - n8n</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        
+        .test-button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 14px;
+        }
+        
+        .test-button:hover {
+            background: #4338ca;
+        }
+        
+        .result {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        
+        .result.success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+        }
+        
+        .result.error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+        }
+        
+        .result.info {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+        }
+        
+        .url-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔗 Тест Webhook n8n</h1>
+            <p>Диагностика подключения к n8n webhook</p>
+        </div>
+        
+        <div class="content">
+            <div class="test-section">
+                <h3>1. Настройка URL</h3>
+                <input type="text" id="webhookUrl" class="url-input"
+                       value="https://n8n.dmytrotovstytskyi.online/webhook-test/delivery"
+                       placeholder="Введите URL вашего n8n webhook">
+                <button class="test-button" onclick="testConnection()">Проверить подключение</button>
+                <div id="connectionResult"></div>
+            </div>
+            
+            <div class="test-section">
+                <h3>2. Тест простого POST запроса</h3>
+                <button class="test-button" onclick="testSimplePost()">Отправить простые данные</button>
+                <div id="simplePostResult"></div>
+            </div>
+            
+            <div class="test-section">
+                <h3>3. Тест FormData запроса</h3>
+                <button class="test-button" onclick="testFormData()">Отправить FormData</button>
+                <div id="formDataResult"></div>
+            </div>
+            
+            <div class="test-section">
+                <h3>4. Тест с файлом</h3>
+                <input type="file" id="testFile" accept="image/*">
+                <button class="test-button" onclick="testWithFile()">Отправить с файлом</button>
+                <div id="fileResult"></div>
+            </div>
+            
+            <div class="test-section">
+                <h3>5. Проверка CORS</h3>
+                <button class="test-button" onclick="testCORS()">Проверить CORS</button>
+                <div id="corsResult"></div>
+            </div>
+            
+            <div class="test-section">
+                <h3>6. Диагностика сети</h3>
+                <button class="test-button" onclick="networkDiagnostics()">Диагностика</button>
+                <div id="networkResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function getWebhookUrl() {
+            return document.getElementById('webhookUrl').value.trim();
+        }
+        
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+        
+        async function testConnection() {
+            const url = getWebhookUrl();
+            showResult('connectionResult', 'Проверяем подключение...', 'info');
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                showResult('connectionResult', 
+                    `✅ Подключение успешно!\nСтатус: ${response.status}\nURL доступен`, 
+                    'success');
+            } catch (error) {
+                showResult('connectionResult', 
+                    `❌ Ошибка подключения:\n${error.message}\n\nВозможные причины:\n- URL недоступен\n- CORS не настроен\n- Сервер не отвечает`, 
+                    'error');
+            }
+        }
+        
+        async function testSimplePost() {
+            const url = getWebhookUrl();
+            showResult('simplePostResult', 'Отправляем простые данные...', 'info');
+            
+            const testData = {
+                test: true,
+                message: 'Тестовое сообщение',
+                timestamp: new Date().toISOString()
+            };
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const responseText = await response.text();
+                
+                showResult('simplePostResult', 
+                    `✅ Запрос успешен!\nСтатус: ${response.status}\nОтвет: ${responseText}`, 
+                    'success');
+            } catch (error) {
+                showResult('simplePostResult', 
+                    `❌ Ошибка отправки:\n${error.message}`, 
+                    'error');
+            }
+        }
+        
+        async function testFormData() {
+            const url = getWebhookUrl();
+            showResult('formDataResult', 'Отправляем FormData...', 'info');
+            
+            const formData = new FormData();
+            const testData = {
+                id: 'test-' + Date.now(),
+                productName: 'Тестовый товар',
+                quantity: 10,
+                unit: 'кг',
+                pricePerUnit: 25.50,
+                totalAmount: 255.00,
+                location: 'Тестовая локация',
+                timestamp: new Date().toISOString(),
+                type: 'Закупка'
+            };
+            
+            formData.append('data', JSON.stringify(testData));
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const responseText = await response.text();
+                
+                showResult('formDataResult', 
+                    `✅ FormData отправлен!\nСтатус: ${response.status}\nОтвет: ${responseText}`, 
+                    'success');
+            } catch (error) {
+                showResult('formDataResult', 
+                    `❌ Ошибка отправки FormData:\n${error.message}`, 
+                    'error');
+            }
+        }
+        
+        async function testWithFile() {
+            const url = getWebhookUrl();
+            const fileInput = document.getElementById('testFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showResult('fileResult', '❌ Выберите файл для тестирования', 'error');
+                return;
+            }
+            
+            showResult('fileResult', 'Отправляем данные с файлом...', 'info');
+            
+            const formData = new FormData();
+            const testData = {
+                id: 'test-file-' + Date.now(),
+                productName: 'Товар с фото',
+                quantity: 5,
+                unit: 'шт',
+                location: 'Тест с файлом',
+                timestamp: new Date().toISOString(),
+                type: 'Закупка'
+            };
+            
+            formData.append('data', JSON.stringify(testData));
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const responseText = await response.text();
+                
+                showResult('fileResult', 
+                    `✅ Данные с файлом отправлены!\nСтатус: ${response.status}\nРазмер файла: ${file.size} байт\nОтвет: ${responseText}`, 
+                    'success');
+            } catch (error) {
+                showResult('fileResult', 
+                    `❌ Ошибка отправки с файлом:\n${error.message}`, 
+                    'error');
+            }
+        }
+        
+        async function testCORS() {
+            const url = getWebhookUrl();
+            showResult('corsResult', 'Проверяем CORS настройки...', 'info');
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin,
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type'
+                    }
+                });
+                
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                    'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers')
+                };
+                
+                showResult('corsResult', 
+                    `✅ CORS проверка завершена!\nСтатус: ${response.status}\nCORS заголовки:\n${JSON.stringify(corsHeaders, null, 2)}`, 
+                    'success');
+            } catch (error) {
+                showResult('corsResult', 
+                    `❌ Ошибка CORS:\n${error.message}\n\nВозможно, сервер не поддерживает CORS или неправильно настроен`, 
+                    'error');
+            }
+        }
+        
+        async function networkDiagnostics() {
+            const url = getWebhookUrl();
+            showResult('networkResult', 'Запуск диагностики сети...', 'info');
+            
+            let diagnostics = '';
+            
+            // Проверка URL
+            try {
+                const urlObj = new URL(url);
+                diagnostics += `✅ URL корректный:\n`;
+                diagnostics += `  Протокол: ${urlObj.protocol}\n`;
+                diagnostics += `  Хост: ${urlObj.hostname}\n`;
+                diagnostics += `  Порт: ${urlObj.port || (urlObj.protocol === 'https:' ? '443' : '80')}\n`;
+                diagnostics += `  Путь: ${urlObj.pathname}\n\n`;
+            } catch (error) {
+                diagnostics += `❌ Некорректный URL: ${error.message}\n\n`;
+            }
+            
+            // Проверка доступности домена
+            try {
+                const startTime = performance.now();
+                const response = await fetch(url, { 
+                    method: 'HEAD',
+                    mode: 'no-cors'
+                });
+                const endTime = performance.now();
+                
+                diagnostics += `✅ Сервер отвечает\n`;
+                diagnostics += `  Время ответа: ${Math.round(endTime - startTime)}ms\n\n`;
+            } catch (error) {
+                diagnostics += `❌ Сервер не отвечает: ${error.message}\n\n`;
+            }
+            
+            // Информация о браузере
+            diagnostics += `🌐 Информация о браузере:\n`;
+            diagnostics += `  User Agent: ${navigator.userAgent}\n`;
+            diagnostics += `  Онлайн: ${navigator.onLine}\n`;
+            diagnostics += `  Язык: ${navigator.language}\n\n`;
+            
+            // Проверка поддержки технологий
+            diagnostics += `🔧 Поддержка технологий:\n`;
+            diagnostics += `  Fetch API: ${typeof fetch !== 'undefined' ? '✅' : '❌'}\n`;
+            diagnostics += `  FormData: ${typeof FormData !== 'undefined' ? '✅' : '❌'}\n`;
+            diagnostics += `  File API: ${typeof File !== 'undefined' ? '✅' : '❌'}\n`;
+            
+            showResult('networkResult', diagnostics, 'info');
+        }
+    </script>
+</body>
+</html>

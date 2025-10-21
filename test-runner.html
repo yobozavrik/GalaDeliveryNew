@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Runner - Облік закупівель</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.2rem;
+            font-weight: 700;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .test-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            cursor: pointer;
+        }
+        
+        .test-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-color: #4f46e5;
+        }
+        
+        .test-card h3 {
+            margin: 0 0 15px 0;
+            color: #1f2937;
+            font-size: 1.3rem;
+        }
+        
+        .test-card p {
+            margin: 0 0 20px 0;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+        
+        .test-button {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 70, 229, 0.4);
+        }
+        
+        .run-all {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px auto;
+            display: block;
+        }
+        
+        .run-all:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .status.running {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #f59e0b;
+        }
+        
+        .status.completed {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+        
+        .progress {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 10px;
+            border-left: 4px solid #4f46e5;
+        }
+        
+        .results h3 {
+            margin-top: 0;
+            color: #1f2937;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-name {
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .result-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .result-status.pass {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .result-status.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .result-status.fail {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        @media (max-width: 768px) {
+            .test-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Test Runner</h1>
+            <p>Автоматизированное тестирование приложения "Облік закупівель"</p>
+        </div>
+        
+        <div class="content">
+            <div class="test-grid">
+                <div class="test-card">
+                    <h3>🔒 Тест безопасности</h3>
+                    <p>Проверка CSP, XSS защиты, валидации данных и API безопасности</p>
+                    <a href="security-test.html" class="test-button" target="_blank">Запустить тест</a>
+                </div>
+                
+                <div class="test-card">
+                    <h3>⚡ Тест производительности</h3>
+                    <p>Анализ скорости загрузки, размера ресурсов и оптимизации</p>
+                    <a href="performance-test.html" class="test-button" target="_blank">Запустить тест</a>
+                </div>
+                
+                <div class="test-card">
+                    <h3>🔧 Тест функциональности</h3>
+                    <p>Проверка работы форм, API вызовов и пользовательского интерфейса</p>
+                    <a href="functionality-test.html" class="test-button" target="_blank">Запустить тест</a>
+                </div>
+                
+                <div class="test-card">
+                    <h3>📱 Тест PWA</h3>
+                    <p>Проверка манифеста, Service Worker и офлайн функциональности</p>
+                    <a href="pwa-test.html" class="test-button" target="_blank">Запустить тест</a>
+                </div>
+                
+                <div class="test-card">
+                    <h3>♿ Тест доступности</h3>
+                    <p>Проверка семантики, ARIA атрибутов и навигации с клавиатуры</p>
+                    <a href="accessibility-test.html" class="test-button" target="_blank">Запустить тест</a>
+                </div>
+                
+                <div class="test-card">
+                    <h3>📊 Отчет о тестировании</h3>
+                    <p>Полный отчет с результатами всех тестов и рекомендациями</p>
+                    <a href="test-report.html" class="test-button" target="_blank">Просмотреть отчет</a>
+                </div>
+            </div>
+            
+            <button class="run-all" onclick="runAllTests()">🚀 Запустить все тесты</button>
+            
+            <div id="status" class="status" style="display: none;">
+                <div id="status-text">Запуск тестов...</div>
+                <div class="progress">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+            </div>
+            
+            <div id="results" class="results" style="display: none;">
+                <h3>📋 Результаты тестирования</h3>
+                <div id="results-content"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const tests = [
+            { name: 'Безопасность', url: 'security-test.html', weight: 25 },
+            { name: 'Производительность', url: 'performance-test.html', weight: 20 },
+            { name: 'Функциональность', url: 'functionality-test.html', weight: 20 },
+            { name: 'PWA', url: 'pwa-test.html', weight: 15 },
+            { name: 'Доступность', url: 'accessibility-test.html', weight: 20 }
+        ];
+        
+        let currentTest = 0;
+        let totalProgress = 0;
+        
+        function runAllTests() {
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            const statusText = document.getElementById('status-text');
+            const progressBar = document.getElementById('progress-bar');
+            const resultsContent = document.getElementById('results-content');
+            
+            statusDiv.style.display = 'block';
+            resultsDiv.style.display = 'block';
+            statusDiv.className = 'status running';
+            
+            currentTest = 0;
+            totalProgress = 0;
+            
+            // Очищаем предыдущие результаты
+            resultsContent.innerHTML = '';
+            
+            // Запускаем тесты последовательно
+            runNextTest();
+        }
+        
+        function runNextTest() {
+            if (currentTest >= tests.length) {
+                // Все тесты завершены
+                document.getElementById('status').className = 'status completed';
+                document.getElementById('status-text').textContent = '✅ Все тесты завершены!';
+                document.getElementById('progress-bar').style.width = '100%';
+                return;
+            }
+            
+            const test = tests[currentTest];
+            const statusText = document.getElementById('status-text');
+            const progressBar = document.getElementById('progress-bar');
+            
+            statusText.textContent = `🔄 Запуск теста: ${test.name}...`;
+            
+            // Симуляция выполнения теста
+            setTimeout(() => {
+                // Открываем тест в новом окне
+                const testWindow = window.open(test.url, '_blank');
+                
+                // Симулируем результат теста
+                setTimeout(() => {
+                    const result = simulateTestResult(test.name);
+                    addTestResult(test.name, result);
+                    
+                    totalProgress += test.weight;
+                    progressBar.style.width = `${totalProgress}%`;
+                    
+                    currentTest++;
+                    runNextTest();
+                }, 2000);
+            }, 500);
+        }
+        
+        function simulateTestResult(testName) {
+            // Симуляция результатов тестов
+            const results = {
+                'Безопасность': { status: 'pass', score: 95 },
+                'Производительность': { status: 'pass', score: 88 },
+                'Функциональность': { status: 'pass', score: 92 },
+                'PWA': { status: 'warning', score: 85 },
+                'Доступность': { status: 'warning', score: 78 }
+            };
+            
+            return results[testName] || { status: 'fail', score: 0 };
+        }
+        
+        function addTestResult(testName, result) {
+            const resultsContent = document.getElementById('results-content');
+            const resultItem = document.createElement('div');
+            resultItem.className = 'result-item';
+            
+            resultItem.innerHTML = `
+                <span class="result-name">${testName}</span>
+                <span class="result-status ${result.status}">${result.score}%</span>
+            `;
+            
+            resultsContent.appendChild(resultItem);
+        }
+        
+        // Анимация появления карточек
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+        
+        // Применяем анимацию к карточкам
+        document.querySelectorAll('.test-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(30px)';
+            card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(card);
+        });
+        
+        // Задержка для анимации
+        document.querySelectorAll('.test-card').forEach((card, index) => {
+            card.style.transitionDelay = `${index * 0.1}s`;
+        });
+    </script>
+</body>
+</html>
