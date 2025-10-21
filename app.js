@@ -2082,12 +2082,6 @@ function showRecognizedItemsScreen() {
     }
 }
 
-function editRecognizedItem(index) {
-    // TODO: Можно добавить модальное окно для редактирования
-    // Пока просто удаляем и пользователь может добавить вручную
-    toastManager.show('Використовуйте "Видалити" та "Додати товар" для змін', 'info');
-}
-
 function deleteRecognizedItem(index) {
     if (!confirm('Видалити цей товар зі списку?')) return;
 
