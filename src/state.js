@@ -9,6 +9,7 @@ class AppState {
         this.selectedStore = null;
         this.batchItems = [];
         this.editingItemId = null;
+        this.operationType = null;
         this.uiAdapter = uiAdapter;
     }
 
@@ -42,6 +43,9 @@ class AppState {
         this.screen = screen;
         if (options.isUnloading !== undefined) this.isUnloading = options.isUnloading;
         if (options.isDelivery !== undefined) this.isDelivery = options.isDelivery;
+        if (Object.prototype.hasOwnProperty.call(options, 'operationType')) {
+            this.operationType = options.operationType;
+        }
         this.updateUI();
     }
 
@@ -372,6 +376,40 @@ class IndexedDBManager {
     static DB_VERSION = 1;
     static db = null;
     static isAvailable = false;
+    static cloneFallback(value) {
+        if (Array.isArray(value)) {
+            return [...value];
+        }
+
+        if (value && typeof value === 'object') {
+            return { ...value };
+        }
+
+        return value;
+    }
+
+    static safeParseJSON(rawValue, fallback, context = 'localStorage') {
+        if (!rawValue) {
+            return this.cloneFallback(fallback);
+        }
+
+        try {
+            const parsed = JSON.parse(rawValue);
+
+            if (Array.isArray(fallback)) {
+                return Array.isArray(parsed) ? parsed : this.cloneFallback(fallback);
+            }
+
+            if (fallback && typeof fallback === 'object') {
+                return parsed && typeof parsed === 'object' ? parsed : this.cloneFallback(fallback);
+            }
+
+            return parsed;
+        } catch (error) {
+            console.warn(`IndexedDBManager: invalid JSON in ${context}, falling back to default`, error);
+            return this.cloneFallback(fallback);
+        }
+    }
 
     static async init() {
         if (!window.indexedDB) {
@@ -567,7 +605,7 @@ class IndexedDBManager {
             };
 
             if (!this.isAvailable || !this.db) {
-                const logs = JSON.parse(localStorage.getItem('logs') || '[]');
+                const logs = this.safeParseJSON(localStorage.getItem('logs'), [], 'logs');
                 logs.push(logEntry);
                 localStorage.setItem('logs', JSON.stringify(logs));
                 return;
@@ -582,17 +620,17 @@ class IndexedDBManager {
     }
 
     static async migrateFromLocalStorage() {
-        const history = JSON.parse(localStorage.getItem('delivery_history') || '[]');
+        const history = this.safeParseJSON(localStorage.getItem('delivery_history'), [], 'delivery_history');
         for (const item of history) {
             await this.put('history', item);
         }
 
-        const drafts = JSON.parse(localStorage.getItem('delivery_drafts') || '{}');
+        const drafts = this.safeParseJSON(localStorage.getItem('delivery_drafts'), {}, 'delivery_drafts');
         for (const storeName of Object.keys(drafts)) {
             await this.put('drafts', drafts[storeName]);
         }
 
-        const purchaseDrafts = JSON.parse(localStorage.getItem('purchase_drafts') || '{}');
+        const purchaseDrafts = this.safeParseJSON(localStorage.getItem('purchase_drafts'), {}, 'purchase_drafts');
         for (const locationName of Object.keys(purchaseDrafts)) {
             await this.put('purchaseDrafts', purchaseDrafts[locationName]);
         }
@@ -605,24 +643,45 @@ class IndexedDBManager {
     }
 
     static getFromLocalStorage(storeName, key) {
-        const data = JSON.parse(localStorage.getItem(this.getLocalStorageKey(storeName)) || '{}');
+        const data = this.safeParseJSON(
+            localStorage.getItem(this.getLocalStorageKey(storeName)),
+            {},
+            `${storeName}-store`
+        );
         return data[key] || null;
     }
 
     static getAllFromLocalStorage(storeName) {
-        const data = JSON.parse(localStorage.getItem(this.getLocalStorageKey(storeName)) || '{}');
+        const data = this.safeParseJSON(
+            localStorage.getItem(this.getLocalStorageKey(storeName)),
+            {},
+            `${storeName}-store`
+        );
         return Object.values(data);
     }
 
     static saveToLocalStorage(storeName, value) {
-        const data = JSON.parse(localStorage.getItem(this.getLocalStorageKey(storeName)) || '{}');
-        data[value.storeName || value.locationName || value.key || value.id] = value;
+        const data = this.safeParseJSON(
+            localStorage.getItem(this.getLocalStorageKey(storeName)),
+            {},
+            `${storeName}-store`
+        );
+        const key = value?.storeName || value?.locationName || value?.key || value?.id;
+        if (!key) {
+            console.warn('IndexedDBManager: cannot determine key for localStorage save', { storeName, value });
+            return false;
+        }
+        data[key] = value;
         localStorage.setItem(this.getLocalStorageKey(storeName), JSON.stringify(data));
         return true;
     }
 
     static deleteFromLocalStorage(storeName, key) {
-        const data = JSON.parse(localStorage.getItem(this.getLocalStorageKey(storeName)) || '{}');
+        const data = this.safeParseJSON(
+            localStorage.getItem(this.getLocalStorageKey(storeName)),
+            {},
+            `${storeName}-store`
+        );
         delete data[key];
         localStorage.setItem(this.getLocalStorageKey(storeName), JSON.stringify(data));
         return true;
