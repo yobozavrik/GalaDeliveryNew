@@ -1718,7 +1718,6 @@ function showReceiptScanScreen() {
     const processBtn = document.getElementById('processReceiptBtn');
     const actions = document.getElementById('receiptCameraActions');
     const previewImage = document.getElementById('receiptPreviewImage');
-
     if (preview) preview.style.display = 'none';
     if (previewImage) previewImage.src = '';
     if (processBtn) processBtn.style.display = 'none';
@@ -1760,7 +1759,6 @@ function retakeReceiptPhoto() {
     const preview = document.getElementById('receiptPreview');
     const processBtn = document.getElementById('processReceiptBtn');
     const actions = document.getElementById('receiptCameraActions');
-
     if (preview) preview.style.display = 'none';
     if (processBtn) processBtn.style.display = 'none';
     if (actions) actions.style.display = 'flex';
