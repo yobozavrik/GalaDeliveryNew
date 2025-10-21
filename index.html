@@ -382,7 +382,6 @@
 
                 <div class="receipt-scan-container">
                     <div class="receipt-camera-area">
-                        <input type="file" id="receiptPhotoInput" accept="image/*" capture="environment" style="display: none;">
 
                         <div class="receipt-camera-actions" id="receiptCameraActions">
                             <button class="receipt-camera-button glassmorphism" id="openCameraBtn" type="button">
@@ -393,20 +392,6 @@
                                 <i data-lucide="image"></i>
                                 <span>Завантажити фото</span>
                             </button>
-                        </div>
-
-                        <div class="receipt-camera-stream glassmorphism" id="receiptCameraStreamWrapper" style="display: none;">
-                            <video id="receiptCameraStream" autoplay playsinline muted></video>
-                            <div class="receipt-camera-stream-controls">
-                                <button class="capture-receipt-btn" id="captureReceiptPhotoBtn" type="button">
-                                    <i data-lucide="camera"></i>
-                                    <span>Зробити знімок</span>
-                                </button>
-                                <button class="close-camera-btn" id="closeCameraBtn" type="button">
-                                    <i data-lucide="x"></i>
-                                    <span>Закрити камеру</span>
-                                </button>
-                            </div>
                         </div>
 
                         <div class="receipt-preview" id="receiptPreview" style="display: none;">

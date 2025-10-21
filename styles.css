@@ -2345,21 +2345,6 @@ body.test-mode .app-header {
     background: rgba(30, 41, 59, 0.95);
 }
 
-[data-theme="dark"] .receipt-camera-stream {
-    background: rgba(15, 23, 42, 0.6);
-    border-color: rgba(148, 163, 184, 0.25);
-}
-
-[data-theme="dark"] .close-camera-btn {
-    background: rgba(30, 41, 59, 0.85);
-    border: 1px solid rgba(148, 163, 184, 0.3);
-}
-
-[data-theme="dark"] .close-camera-btn:hover {
-    border-color: var(--primary);
-    background: rgba(30, 41, 59, 0.95);
-}
-
 [data-theme="dark"] .scanning-status h3 {
     background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
     -webkit-background-clip: text;

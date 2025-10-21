@@ -117,6 +117,7 @@ const appState = new AppState(appUI);
 const toastManager = new ToastManager();
 let selectedFile = null;
 let receiptPhotoFile = null;
+let receiptPhotoSource = null;
 let recognizedItems = [];
 let receiptCameraStream = null;
 
@@ -214,7 +215,6 @@ async function handleBackButton() {
     appState.editingItemId = null;
 
     if (appState.screen === 'receipt-scan') {
-        stopReceiptCameraStream();
     }
 
     // Розумна навігація назад
@@ -1609,19 +1609,16 @@ function stopReceiptCameraStream() {
 function showReceiptScanScreen() {
     appState.setScreen('receipt-scan');
     receiptPhotoFile = null;
-    stopReceiptCameraStream();
 
     const preview = document.getElementById('receiptPreview');
     const processBtn = document.getElementById('processReceiptBtn');
     const actions = document.getElementById('receiptCameraActions');
     const previewImage = document.getElementById('receiptPreviewImage');
-    const input = document.getElementById('receiptPhotoInput');
 
     if (preview) preview.style.display = 'none';
     if (previewImage) previewImage.src = '';
     if (processBtn) processBtn.style.display = 'none';
     if (actions) actions.style.display = 'flex';
-    if (input) input.value = '';
 }
 
 function applyReceiptPhotoFile(file) {
@@ -1648,107 +1645,20 @@ function applyReceiptPhotoFile(file) {
     if (preview) preview.style.display = 'block';
     if (processBtn) processBtn.style.display = 'block';
     if (actions) actions.style.display = 'flex';
-
-    stopReceiptCameraStream();
-    toastManager.show('Фото додано. Натисніть "Розпізнати чек"', 'success');
-    return true;
-}
-
-function handleReceiptPhotoSelect(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    applyReceiptPhotoFile(file);
 }
 
 function retakeReceiptPhoto() {
+    const previousSource = receiptPhotoSource;
     receiptPhotoFile = null;
+    receiptPhotoSource = null;
 
     const preview = document.getElementById('receiptPreview');
     const processBtn = document.getElementById('processReceiptBtn');
     const actions = document.getElementById('receiptCameraActions');
-    const input = document.getElementById('receiptPhotoInput');
 
     if (preview) preview.style.display = 'none';
     if (processBtn) processBtn.style.display = 'none';
     if (actions) actions.style.display = 'flex';
-    if (input) input.value = '';
-
-    stopReceiptCameraStream();
-}
-
-async function openReceiptCamera() {
-    if (!navigator.mediaDevices?.getUserMedia) {
-        toastManager.show('Камера не підтримується. Завантажте фото з галереї.', 'error');
-        document.getElementById('receiptPhotoInput')?.click();
-        return;
-    }
-
-    try {
-        receiptCameraStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: { ideal: 'environment' }
-            }
-        });
-
-        const video = document.getElementById('receiptCameraStream');
-        const streamWrapper = document.getElementById('receiptCameraStreamWrapper');
-        const actions = document.getElementById('receiptCameraActions');
-
-        if (video) {
-            video.srcObject = receiptCameraStream;
-            await video.play().catch(() => {});
-        }
-
-        if (streamWrapper) streamWrapper.style.display = 'flex';
-        if (actions) actions.style.display = 'none';
-
-        toastManager.show('Камера увімкнена. Зробіть фото чека.', 'info');
-    } catch (error) {
-        console.error('Camera access error:', error);
-        toastManager.show('Не вдалося отримати доступ до камери. Дозвольте доступ або завантажте фото.', 'error');
-        stopReceiptCameraStream();
-        const actions = document.getElementById('receiptCameraActions');
-        if (actions) actions.style.display = 'flex';
-        document.getElementById('receiptPhotoInput')?.click();
-    }
-}
-
-function closeReceiptCamera() {
-    stopReceiptCameraStream();
-    const actions = document.getElementById('receiptCameraActions');
-    if (actions) actions.style.display = 'flex';
-}
-
-function captureReceiptPhoto() {
-    const video = document.getElementById('receiptCameraStream');
-    if (!video || !receiptCameraStream) {
-        toastManager.show('Камера не готова. Спробуйте ще раз.', 'error');
-        return;
-    }
-
-    const { videoWidth, videoHeight } = video;
-    if (!videoWidth || !videoHeight) {
-        toastManager.show('Зображення ще не завантажилось. Зачекайте секунду.', 'error');
-        return;
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = videoWidth;
-    canvas.height = videoHeight;
-
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    canvas.toBlob((blob) => {
-        if (!blob) {
-            toastManager.show('Не вдалося зробити фото. Спробуйте ще раз.', 'error');
-            return;
-        }
-
-        const file = new File([blob], `metro-receipt-${Date.now()}.jpg`, { type: 'image/jpeg' });
-        applyReceiptPhotoFile(file);
-    }, 'image/jpeg', 0.95);
 }
 
 async function processReceipt() {
@@ -2076,12 +1986,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('openCameraBtn')?.addEventListener('click', openReceiptCamera);
     document.getElementById('chooseReceiptPhotoBtn')?.addEventListener('click', () => {
-        stopReceiptCameraStream();
-        document.getElementById('receiptPhotoInput')?.click();
-    });
-    document.getElementById('receiptPhotoInput')?.addEventListener('change', handleReceiptPhotoSelect);
-    document.getElementById('captureReceiptPhotoBtn')?.addEventListener('click', captureReceiptPhoto);
-    document.getElementById('closeCameraBtn')?.addEventListener('click', closeReceiptCamera);
     document.getElementById('retakePhotoBtn')?.addEventListener('click', retakeReceiptPhoto);
     document.getElementById('processReceiptBtn')?.addEventListener('click', processReceipt);
     document.getElementById('confirmRecognizedItemsBtn')?.addEventListener('click', confirmRecognizedItems);
