@@ -1,4 +1,30 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+const PDF_LIB_CDN_URL = 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.esm.min.js';
+
+let pdfLibModulePromise = null;
+let PDFDocument;
+let StandardFonts;
+let rgb;
+
+async function loadPdfLib() {
+    if (!pdfLibModulePromise) {
+        pdfLibModulePromise = import(/* @vite-ignore */ PDF_LIB_CDN_URL)
+            .then((module) => {
+                PDFDocument = module.PDFDocument;
+                StandardFonts = module.StandardFonts;
+                rgb = module.rgb;
+                return module;
+            })
+            .catch((error) => {
+                pdfLibModulePromise = null;
+                console.error('Failed to load pdf-lib from CDN.', error);
+                const failure = new Error('Failed to load pdf-lib from CDN.');
+                failure.cause = error;
+                throw failure;
+            });
+    }
+
+    return pdfLibModulePromise;
+}
 
 const FONT_URL = 'fonts/NotoSans-Regular.ttf';
 const PAGE_WIDTH = 595.28; // A4 width in points
@@ -359,6 +385,8 @@ function drawTotalsRow(context) {
 }
 
 export async function generateUnloadingReport(batchData, options = {}) {
+    await loadPdfLib();
+
     const {
         storeName = 'Невідома точка',
         items,
