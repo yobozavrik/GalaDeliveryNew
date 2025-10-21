@@ -241,7 +241,7 @@ class ToastManager {
 
 class ThemeManager {
     static init() {
-        const savedTheme = localStorage.getItem('theme') || 'light';
+        const savedTheme = this.getStoredTheme() || 'light';
         this.setTheme(savedTheme);
 
         const themeToggle = document.getElementById('themeToggle');
@@ -255,7 +255,7 @@ class ThemeManager {
 
     static setTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
+        this.saveTheme(theme);
 
         const themeIcon = document.querySelector('.theme-icon');
         if (themeIcon) {
@@ -263,6 +263,23 @@ class ThemeManager {
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
+        }
+    }
+
+    static getStoredTheme() {
+        try {
+            return localStorage.getItem('theme');
+        } catch (error) {
+            console.warn('ThemeManager: cannot read theme from storage', error);
+            return null;
+        }
+    }
+
+    static saveTheme(theme) {
+        try {
+            localStorage.setItem('theme', theme);
+        } catch (error) {
+            console.warn('ThemeManager: cannot persist theme', error);
         }
     }
 }
