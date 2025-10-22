@@ -684,6 +684,66 @@
         </div>
     </div>
 
+    <!-- Modal для превью PDF перед отправкой -->
+    <div class="modal-overlay" id="pdfPreviewModal">
+        <div class="modal-content glassmorphism pdf-preview-modal">
+            <div class="modal-header">
+                <h3>📄 Звіт готовий до відправки</h3>
+                <button class="modal-close" id="closePdfPreviewBtn" type="button">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+
+            <div class="pdf-preview-content">
+                <div class="pdf-info-card glassmorphism">
+                    <div class="pdf-info-row">
+                        <span class="pdf-info-label">Магазин:</span>
+                        <span class="pdf-info-value" id="pdfStoreName">—</span>
+                    </div>
+                    <div class="pdf-info-row">
+                        <span class="pdf-info-label">Дата:</span>
+                        <span class="pdf-info-value" id="pdfDate">—</span>
+                    </div>
+                    <div class="pdf-info-row">
+                        <span class="pdf-info-label">Час:</span>
+                        <span class="pdf-info-value" id="pdfTime">—</span>
+                    </div>
+                    <div class="pdf-info-divider"></div>
+                    <div class="pdf-info-row">
+                        <span class="pdf-info-label">Товарів:</span>
+                        <span class="pdf-info-value" id="pdfItemsCount">—</span>
+                    </div>
+                    <div class="pdf-info-row" id="pdfWeightRow">
+                        <span class="pdf-info-label">Загальна вага:</span>
+                        <span class="pdf-info-value" id="pdfTotalWeight">—</span>
+                    </div>
+                    <div class="pdf-info-row pdf-info-highlight">
+                        <span class="pdf-info-label">Сума:</span>
+                        <span class="pdf-info-value pdf-info-amount" id="pdfTotalAmount">—</span>
+                    </div>
+                </div>
+
+                <div class="pdf-preview-actions">
+                    <button class="btn-secondary" id="downloadPdfBtn" type="button">
+                        <i data-lucide="download"></i>
+                        <span>Завантажити PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-secondary" id="cancelPdfSubmitBtn" type="button">
+                    <i data-lucide="x"></i>
+                    <span>Скасувати</span>
+                </button>
+                <button class="btn-primary btn-large" id="confirmPdfSubmitBtn" type="button">
+                    <i data-lucide="check-circle"></i>
+                    <span>Підтвердити та відправити</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Скрипти -->
     <script type="importmap" src="import-map.json"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>

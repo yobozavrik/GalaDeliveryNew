@@ -356,6 +356,10 @@ class AppUIAdapter {
             'purchase-location-selection': () => 'Оберіть локацію закупки',
             'purchase-drafts-list': () => 'Чернетки закупок',
             'purchase-draft-view': () => state.selectedStore ? `Закупка: ${state.selectedStore}` : 'Чернетка закупки',
+            'operations-summary': () => 'Операції сьогодні',
+            'metro-method-selection': () => 'Метро - Оберіть метод',
+            'receipt-scan': () => 'Сканування чека',
+            'recognized-items': () => 'Перевірка товарів',
         };
 
         if (screenTitles[state.screen]) {

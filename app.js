@@ -248,6 +248,9 @@ async function handleBackButton() {
         // З вибору локації для закупки - до списку чернеток закупок
         appState.setScreen('purchase-drafts-list');
         await showPurchaseDraftsList();
+    } else if (appState.screen === 'operations-summary') {
+        // З екрану операцій - на головну
+        appState.setScreen('main');
     } else if (appState.screen === 'operations-detail') {
         appState.setScreen('operations-summary', { isUnloading: false, isDelivery: false, operationType: null });
         await renderOperationsSummary();
@@ -276,7 +279,7 @@ async function startUnloading() {
     await showDraftsList();
 }
 
-async function showOperationsSummary() {
+// Helper function to summarize operation items
 function summarizeOperationItems(items) {
     const totalAmount = items.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0);
     const totalWeight = items.reduce((sum, item) => {
@@ -295,6 +298,7 @@ function summarizeOperationItems(items) {
     };
 }
 
+// Helper function to format products list
 function formatProductsList(products) {
     if (!products.length) return '—';
 
@@ -302,6 +306,33 @@ function formatProductsList(products) {
     const rest = products.length > 3 ? ` +${products.length - 3}` : '';
     return `${preview}${rest}`;
 }
+
+// Function to get today's items
+function getTodaysItems(allItems) {
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+
+    return allItems.filter(item => {
+        const itemDate = new Date(item.timestamp);
+        return itemDate >= todayStart && itemDate < todayEnd;
+    });
+}
+
+// Main function to show operations summary
+async function showOperationsSummary() {
+    appState.setScreen('operations-summary');
+    await renderOperationsSummary();
+}
+
+// Helper function to refresh operations summary if visible
+function refreshOperationsSummaryIfVisible() {
+    if (appState.screen === 'operations-summary') {
+        renderOperationsSummary().catch(err => console.error('Error refreshing operations summary:', err));
+    }
+}
+
+// Function to render operations summary
 async function renderOperationsSummary() {
     const dateElement = document.getElementById('operationsSummaryDate');
     const purchaseSubtitle = document.getElementById('purchaseOperationSubtitle');
@@ -326,6 +357,7 @@ async function renderOperationsSummary() {
     dateElement.textContent = today.toLocaleDateString('uk-UA', formatterOptions);
 
     const items = await SecureStorageManager.getHistoryItems();
+    const todaysItems = getTodaysItems(items);
     const purchaseItems = todaysItems.filter(item => item.type === 'Закупка');
     const unloadingItems = todaysItems.filter(item => item.type === 'Відвантаження');
 
@@ -649,6 +681,140 @@ function addItemToDraft() {
     setupPurchaseForm();
 }
 
+// ============================================
+// PDF HELPER FUNCTIONS
+// ============================================
+
+// Подсчет общего веса товаров (только в кг)
+function calculateTotalWeight(items) {
+    return items.reduce((sum, item) => {
+        if (item.unit === 'kg') {
+            return sum + (Number(item.quantity) || 0);
+        }
+        return sum;
+    }, 0);
+}
+
+// Подсчет общей суммы
+function calculateTotalAmount(items) {
+    return items.reduce((sum, item) => {
+        return sum + (Number(item.totalAmount) || 0);
+    }, 0);
+}
+
+// Скачивание PDF файла
+function downloadPdfFile(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+}
+
+// Форматирование даты для имени файла
+function formatDateForFilename(date) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+
+    return `${day}-${month}-${year}_${hours}-${minutes}`;
+}
+
+// Показ модального окна превью PDF (возвращает Promise<boolean>)
+function showPdfPreviewModal(data) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('pdfPreviewModal');
+
+        // Заполняем данные
+        document.getElementById('pdfStoreName').textContent = data.storeName;
+        document.getElementById('pdfDate').textContent = data.date;
+        document.getElementById('pdfTime').textContent = data.time;
+        document.getElementById('pdfItemsCount').textContent =
+            `${data.items.length} ${data.items.length === 1 ? 'позиція' : data.items.length < 5 ? 'позиції' : 'позицій'}`;
+
+        // Вес (показываем только если > 0)
+        const weightRow = document.getElementById('pdfWeightRow');
+        if (data.totalWeight && data.totalWeight > 0) {
+            document.getElementById('pdfTotalWeight').textContent = `${data.totalWeight.toFixed(2)} кг`;
+            weightRow.style.display = 'flex';
+        } else {
+            weightRow.style.display = 'none';
+        }
+
+        document.getElementById('pdfTotalAmount').textContent =
+            `${data.totalAmount.toFixed(2)} ₴`;
+
+        // Обработчики кнопок
+        const confirmBtn = document.getElementById('confirmPdfSubmitBtn');
+        const cancelBtn = document.getElementById('cancelPdfSubmitBtn');
+        const closeBtn = document.getElementById('closePdfPreviewBtn');
+        const downloadBtn = document.getElementById('downloadPdfBtn');
+
+        const cleanup = () => {
+            modal.classList.remove('visible');
+            // Удаляем старые обработчики
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            const newCloseBtn = closeBtn.cloneNode(true);
+            const newDownloadBtn = downloadBtn.cloneNode(true);
+
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+            downloadBtn.parentNode.replaceChild(newDownloadBtn, downloadBtn);
+        };
+
+        // Подтверждение
+        confirmBtn.addEventListener('click', () => {
+            cleanup();
+            resolve(true);
+        }, { once: true });
+
+        // Отмена
+        const cancelHandler = () => {
+            cleanup();
+            resolve(false);
+        };
+        cancelBtn.addEventListener('click', cancelHandler, { once: true });
+        closeBtn.addEventListener('click', cancelHandler, { once: true });
+
+        // Скачать PDF
+        downloadBtn.addEventListener('click', () => {
+            downloadPdfFile(
+                data.pdfBlob,
+                `Відвантаження_${data.storeName}_${formatDateForFilename(new Date())}.pdf`
+            );
+            toastManager.show('PDF завантажено', 'success');
+        }, { once: true });
+
+        // Показываем модалку
+        modal.classList.add('visible');
+
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    });
+}
+
+// Показ модального окна ошибки PDF
+function showPdfErrorModal(error) {
+    toastManager.show(
+        `Помилка генерації PDF: ${error.message}. Відправка неможлива без звіту.`,
+        'error',
+        5000
+    );
+}
+
+// ============================================
+// DRAFT SUBMISSION
+// ============================================
+
 async function submitDraft() {
     const storeName = appState.selectedStore;
     if (!storeName) return;
@@ -666,21 +832,85 @@ async function submitDraft() {
 
     const originalText = submitBtnText?.textContent || 'Відправити всі';
 
+    // ===== ШАГ 1: ГЕНЕРАЦИЯ PDF (ОБЯЗАТЕЛЬНО!) =====
     submitBtn.disabled = true;
     if (submitBtnText) {
-        submitBtnText.textContent = 'Відправка...';
+        submitBtnText.textContent = 'Генеруємо звіт...';
+    }
+
+    let pdfResult;
+    try {
+        const submissionTimestamp = new Date();
+        const totalAmount = calculateTotalAmount(draft.items);
+        const totalWeight = calculateTotalWeight(draft.items);
+
+        pdfResult = await generateUnloadingReport({
+            storeName,
+            items: draft.items,
+            submittedAt: submissionTimestamp,
+            totalWeight,
+            summary: `Відвантаження ${draft.items.length} позицій на суму ${totalAmount.toFixed(2)} ₴.`
+        }, { download: false }); // НЕ скачиваем автоматически
+
+        console.log('✅ PDF успешно сгенерирован:', pdfResult.fileName);
+
+    } catch (pdfError) {
+        console.error('❌ PDF generation error:', pdfError);
+
+        // БЛОКИРУЕМ отправку!
+        submitBtn.disabled = false;
+        if (submitBtnText) {
+            submitBtnText.textContent = originalText;
+        }
+
+        showPdfErrorModal(pdfError);
+        return; // СТОП! Без PDF не продолжаем
+    }
+
+    // ===== ШАГ 2: ПОКАЗЫВАЕМ ПРЕВЬЮ И ЖДЕМ ПОДТВЕРЖДЕНИЯ =====
+    submitBtn.disabled = false;
+    if (submitBtnText) {
+        submitBtnText.textContent = originalText;
+    }
+
+    const now = new Date();
+    const confirmed = await showPdfPreviewModal({
+        storeName,
+        items: draft.items,
+        date: now.toLocaleDateString('uk-UA'),
+        time: now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
+        totalAmount: calculateTotalAmount(draft.items),
+        totalWeight: calculateTotalWeight(draft.items),
+        pdfBlob: pdfResult.blob
+    });
+
+    if (!confirmed) {
+        // Пользователь отменил - PDF остается в памяти
+        toastManager.show('Відправку скасовано', 'info');
+        return;
+    }
+
+    // ===== ШАГ 3: ОТПРАВКА НА СЕРВЕР (ТОЛЬКО ДАННЫЕ, БЕЗ PDF) =====
+    submitBtn.disabled = true;
+    if (submitBtnText) {
+        submitBtnText.textContent = 'Відправляємо...';
     }
 
     try {
-        const submissionTimestamp = new Date();
-        // Відправляємо всю заявку одним запитом
-        await SecureApiClient.sendUnloadingBatch(storeName, draft.items);
+        // Отправляем ТОЛЬКО данные на сервер (БЕЗ PDF)
+        await SecureApiClient.sendUnloadingBatch(
+            storeName,
+            draft.items
+        );
 
-        // Зберігаємо в історію кожен товар окремо (для локального відображення)
+        console.log('✅ Data sent to server (without PDF)');
+
+        // ===== ШАГ 4: ЛОКАЛЬНОЕ СОХРАНЕНИЕ =====
+        // Сохраняем в историю
         for (const item of draft.items) {
             await SecureStorageManager.addToHistory(item);
 
-            // Віднімаємо з inventory, якщо джерело - "purchase"
+            // Обновляем inventory
             if (item.source === 'purchase') {
                 await InventoryManager.removeStock(item.productName, item.quantity, item.unit);
                 console.log(`✅ Removed from inventory: ${item.productName} ${item.quantity} ${item.unit}`);
@@ -689,31 +919,34 @@ async function submitDraft() {
 
         refreshOperationsSummaryIfVisible();
 
-        toastManager.show(`Відправлено ${draft.items.length} ${draft.items.length === 1 ? 'товар' : draft.items.length < 5 ? 'товари' : 'товарів'}`, 'success');
+        // ===== ШАГ 5: СКАЧИВАЕМ PDF ЛОКАЛЬНО =====
+        downloadPdfFile(pdfResult.blob, pdfResult.fileName);
 
-        const totalAmount = draft.items.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0);
-        const totalAmountText = Number.isFinite(totalAmount) ? totalAmount.toFixed(2) : '0.00';
-        try {
-            await generateUnloadingReport({
-                storeName,
-                items: draft.items,
-                submittedAt: submissionTimestamp,
-                summary: `Відвантаження ${draft.items.length} позицій на суму ${totalAmountText} ₴.`
-            });
-        } catch (pdfError) {
-            console.warn('Не вдалося створити PDF-звіт:', pdfError);
-        }
-
-        // Видаляємо чернетку після успішної відправки
+        // ===== ШАГ 6: УСПЕХ - УДАЛЯЕМ ЧЕРНОВИК =====
         await DraftManager.deleteDraft(storeName);
 
-        // Повертаємось до списку чернеток
+        toastManager.show(
+            `Відправлено ${draft.items.length} товарів. PDF збережено у завантаженнях`,
+            'success'
+        );
+
+        // Возвращаемся к списку черновиков
         appState.setScreen('drafts-list');
         await showDraftsList();
 
-    } catch (error) {
-        console.error('Submit draft error:', error);
-        toastManager.show('Помилка відправки. Спробуйте ще раз.', 'error');
+    } catch (serverError) {
+        console.error('❌ Server submit error:', serverError);
+
+        // Сервер упал, но PDF уже есть - сохраняем его локально
+        downloadPdfFile(pdfResult.blob, pdfResult.fileName);
+
+        toastManager.show(
+            'Помилка відправки на сервер. PDF збережено локально. Спробуйте ще раз',
+            'error',
+            5000
+        );
+
+        // Черновик НЕ удаляем - можно повторить отправку
     } finally {
         submitBtn.disabled = false;
         if (submitBtnText) {

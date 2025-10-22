@@ -189,6 +189,105 @@ class SecureApiClient {
         }
     }
 
+    static async sendUnloadingBatchWithPDF(storeName, items, pdfBlob) {
+        if (!this.validateInput(storeName) || !Array.isArray(items) || items.length === 0) {
+            throw new Error('Неправильні дані для відправки');
+        }
+
+        if (!pdfBlob || !(pdfBlob instanceof Blob)) {
+            throw new Error('PDF файл відсутній або невалідний');
+        }
+
+        const webhookUrl = config.N8N_WEBHOOK_URL;
+        if (!webhookUrl) {
+            throw new Error('URL вебхука не налаштовано');
+        }
+
+        // Конвертируем PDF в base64
+        const pdfBase64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64 = reader.result.split(',')[1]; // Убираем префикс data:...;base64,
+                resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(pdfBlob);
+        });
+
+        const submittedAt = new Date();
+        const totalAmount = items.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0);
+        const totalWeight = items.reduce((sum, item) => {
+            if (item.unit === 'kg') {
+                return sum + (Number(item.quantity) || 0);
+            }
+            return sum;
+        }, 0);
+
+        // Формат имени файла
+        const day = String(submittedAt.getDate()).padStart(2, '0');
+        const month = String(submittedAt.getMonth() + 1).padStart(2, '0');
+        const year = submittedAt.getFullYear();
+        const hours = String(submittedAt.getHours()).padStart(2, '0');
+        const minutes = String(submittedAt.getMinutes()).padStart(2, '0');
+        const pdfFileName = `Відвантаження_${storeName}_${day}-${month}-${year}_${hours}-${minutes}.pdf`;
+
+        const payload = {
+            type: 'Відвантаження',
+            storeName,
+            date: submittedAt.toLocaleDateString('uk-UA'),
+            time: submittedAt.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
+            totalItems: items.length,
+            totalAmount: Number(totalAmount.toFixed(2)),
+            totalWeight: Number(totalWeight.toFixed(2)),
+            items: items.map(item => ({
+                productName: item.productName,
+                quantity: Number(item.quantity),
+                unit: item.unit,
+                source: item.source || 'purchase',
+                pricePerUnit: Number(item.pricePerUnit),
+                totalAmount: Number(item.totalAmount),
+                timestamp: item.timestamp
+            })),
+            submittedAt: submittedAt.toISOString(),
+            pdfBase64: pdfBase64,
+            pdfFileName: pdfFileName
+        };
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 секунд для PDF
+
+            const response = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: controller.signal,
+                mode: 'cors'
+            });
+
+            clearTimeout(timeoutId);
+
+            const text = await response.text();
+
+            if (!response.ok) {
+                const error = new Error(`HTTP ${response.status}`);
+                error.status = response.status;
+                error.body = text;
+                throw error;
+            }
+
+            return parseJsonSafely(text);
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                const abortError = new Error('Request timed out (PDF upload)');
+                abortError.status = 408;
+                throw abortError;
+            }
+            console.error('Batch with PDF API Error:', error);
+            throw error;
+        }
+    }
+
     static async generateAISummary(historyText) {
         if (!config.GEMINI_API_URL) {
             throw new Error('AI API not configured');

@@ -3023,3 +3023,122 @@ body.test-mode .app-header {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* ============================================ */
+/* PDF PREVIEW MODAL */
+/* ============================================ */
+
+.pdf-preview-modal {
+    max-width: 550px;
+}
+
+.pdf-preview-content {
+    margin: 1.5rem 0;
+}
+
+.pdf-info-card {
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .pdf-info-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.pdf-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .pdf-info-row {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.pdf-info-row:last-child {
+    border-bottom: none;
+}
+
+.pdf-info-label {
+    font-size: 0.95rem;
+    color: var(--muted-foreground);
+    font-weight: 500;
+}
+
+.pdf-info-value {
+    font-size: 0.95rem;
+    color: var(--foreground);
+    font-weight: 600;
+    text-align: right;
+}
+
+.pdf-info-divider {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.08);
+    margin: 0.5rem 0;
+}
+
+[data-theme="dark"] .pdf-info-divider {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.pdf-info-highlight {
+    background: rgba(79, 70, 229, 0.08);
+    margin: 0.5rem -1rem -1rem;
+    padding: 1rem 1rem 0.75rem;
+    border-radius: 0 0 var(--radius) var(--radius);
+    border-bottom: none;
+}
+
+[data-theme="dark"] .pdf-info-highlight {
+    background: rgba(99, 102, 241, 0.15);
+}
+
+.pdf-info-amount {
+    font-size: 1.25rem;
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.pdf-preview-actions {
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
+}
+
+.btn-large {
+    padding: 0.875rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .pdf-preview-modal {
+        max-width: 95%;
+    }
+
+    .pdf-info-card {
+        padding: 1rem;
+    }
+
+    .pdf-info-label,
+    .pdf-info-value {
+        font-size: 0.875rem;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .modal-actions button {
+        width: 100%;
+    }
+}

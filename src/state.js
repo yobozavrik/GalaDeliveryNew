@@ -373,7 +373,7 @@ class InventoryManager {
 
 class IndexedDBManager {
     static DB_NAME = 'GalaBaluvanaDB';
-    static DB_VERSION = 1;
+    static DB_VERSION = 2; // Увеличена версия для добавления 'logs' store
     static db = null;
     static isAvailable = false;
     static cloneFallback(value) {
@@ -611,9 +611,17 @@ class IndexedDBManager {
                 return;
             }
 
-            const tx = this.getTransaction('logs', 'readwrite');
-            const store = tx.objectStore('logs');
-            store.add(logEntry);
+            try {
+                const tx = this.getTransaction('logs', 'readwrite');
+                const store = tx.objectStore('logs');
+                store.add(logEntry);
+            } catch (txError) {
+                // Fallback to localStorage if transaction fails
+                console.warn('Failed to log to IndexedDB, using localStorage:', txError);
+                const logs = this.safeParseJSON(localStorage.getItem('logs'), [], 'logs');
+                logs.push(logEntry);
+                localStorage.setItem('logs', JSON.stringify(logs));
+            }
         } catch (error) {
             console.error('Error logging action:', error);
         }
