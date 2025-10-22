@@ -703,7 +703,30 @@ function calculateTotalAmount(items) {
 }
 
 // Скачивание PDF файла
-function downloadPdfFile(blob, filename) {
+async function downloadPdfFile(blob, filename) {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+    if (isIOS && navigator.share) {
+        try {
+            const file = new File([blob], filename, { type: 'application/pdf' });
+
+            if (navigator.canShare?.({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: 'Звіт відвантаження',
+                    text: `PDF звіт: ${filename}`
+                });
+                return;
+            }
+        } catch (error) {
+            console.warn('Share API failed, opening in new tab:', error);
+            const fallbackUrl = URL.createObjectURL(blob);
+            window.open(fallbackUrl, '_blank');
+            setTimeout(() => URL.revokeObjectURL(fallbackUrl), 100);
+            return;
+        }
+    }
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -785,8 +808,8 @@ function showPdfPreviewModal(data) {
         closeBtn.addEventListener('click', cancelHandler, { once: true });
 
         // Скачать PDF
-        downloadBtn.addEventListener('click', () => {
-            downloadPdfFile(
+        downloadBtn.addEventListener('click', async () => {
+            await downloadPdfFile(
                 data.pdfBlob,
                 `Відвантаження_${data.storeName}_${formatDateForFilename(new Date())}.pdf`
             );
@@ -920,7 +943,7 @@ async function submitDraft() {
         refreshOperationsSummaryIfVisible();
 
         // ===== ШАГ 5: СКАЧИВАЕМ PDF ЛОКАЛЬНО =====
-        downloadPdfFile(pdfResult.blob, pdfResult.fileName);
+        await downloadPdfFile(pdfResult.blob, pdfResult.fileName);
 
         // ===== ШАГ 6: УСПЕХ - УДАЛЯЕМ ЧЕРНОВИК =====
         await DraftManager.deleteDraft(storeName);
@@ -938,7 +961,7 @@ async function submitDraft() {
         console.error('❌ Server submit error:', serverError);
 
         // Сервер упал, но PDF уже есть - сохраняем его локально
-        downloadPdfFile(pdfResult.blob, pdfResult.fileName);
+        await downloadPdfFile(pdfResult.blob, pdfResult.fileName);
 
         toastManager.show(
             'Помилка відправки на сервер. PDF збережено локально. Спробуйте ще раз',
